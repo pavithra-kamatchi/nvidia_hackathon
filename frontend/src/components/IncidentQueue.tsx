@@ -19,7 +19,8 @@ export function IncidentQueue({
     <section className="panel flex h-full flex-col overflow-hidden">
       <div className="flex shrink-0 items-center px-5 py-3">
         <h2 className="text-base font-bold text-stone-900">
-          Incidents Queue <span className="text-stone-400">({incidents.length})</span>
+          Incidents Queue{" "}
+          <span className="text-stone-400">({incidents.length})</span>
         </h2>
       </div>
 
