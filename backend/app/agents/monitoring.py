@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
-from app.db import reports_collection
+from app.db import get_database
 from app.repositories.collections import assessment_repo, assignment_repo, detection_repo, log_repo
 from app.repositories.collections import incident_repo
 from app.schemas.log import LogEntry
@@ -64,7 +64,7 @@ class MonitoringAgent:
             "generated_at": now.isoformat(),
             **report,
         }
-        await reports_collection.insert_one(doc)
+        await get_database()["reports"].insert_one(doc)
         doc.pop("_id", None)
         return doc
 
