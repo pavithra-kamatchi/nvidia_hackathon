@@ -2,6 +2,7 @@ export type Urgency = "high" | "medium" | "low" | "unclear";
 
 export type IncidentStatus =
   | "new"
+  | "needs_review"
   | "awaiting_approval"
   | "notified"
   | "dispatched"

@@ -4,7 +4,9 @@ from typing import List, Optional
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
+from app.agents.coordinator import coordinator_agent
 from app.agents.monitoring import monitoring_agent
+from app.agents.notification import notification_agent
 from app.repositories.collections import assignment_repo, incident_repo, station_repo
 from app.schemas.common import IncidentStatus, Urgency
 from app.schemas.incident import Incident
@@ -40,8 +42,12 @@ class ReviewRequest(BaseModel):
 @router.post("/incidents/{incident_id}/review", response_model=Incident)
 async def review_incident(incident_id: str, payload: ReviewRequest):
     """Human-in-the-loop checkpoint for any incident sitting at
-    awaiting_approval (forced there by high/unclear urgency or low
-    confidence)."""
+    needs_review (forced there by high/unclear urgency or low confidence).
+
+    Approval confirms/overrides the AI classification and sends the incident
+    through the Coordinator/Notification agents so it lands in the station
+    dispatch queue (awaiting_approval); rejection marks it a false positive.
+    """
     incident = await incident_repo.get(incident_id)
     if incident is None:
         raise HTTPException(status_code=404, detail="Incident not found")
@@ -49,14 +55,17 @@ async def review_incident(incident_id: str, payload: ReviewRequest):
     previous_status = incident.status.value
     if not payload.approved:
         incident.status = IncidentStatus.false_positive
+        incident.last_updated = datetime.now(timezone.utc)
+        await incident_repo.replace(incident)
     else:
         if payload.override_urgency is not None:
             incident.urgency = payload.override_urgency
-        incident.status = IncidentStatus.in_progress if incident.urgency == Urgency.unclear else IncidentStatus.notified
         incident.needs_human_verification = False
+        incident.last_updated = datetime.now(timezone.utc)
+        await incident_repo.replace(incident)
+        assignment = await coordinator_agent.run(incident)
+        incident = await notification_agent.run(incident, assignment)
 
-    incident.last_updated = datetime.now(timezone.utc)
-    await incident_repo.replace(incident)
     await monitoring_agent.log(
         "human_reviewed",
         f"Incident {incident_id} reviewed: approved={payload.approved}, notes={payload.notes or ''}".strip(),

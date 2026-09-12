@@ -17,6 +17,11 @@ class Urgency(str, Enum):
 
 class IncidentStatus(str, Enum):
     new = "new"
+    # AI classification is uncertain (high/unclear urgency or low confidence)
+    # and needs an operator to confirm/override it before it reaches stations.
+    needs_review = "needs_review"
+    # Allocation proposed and posted to the dispatch queue; waiting for a
+    # station to accept and commit to dispatching responders.
     awaiting_approval = "awaiting_approval"
     notified = "notified"
     dispatched = "dispatched"

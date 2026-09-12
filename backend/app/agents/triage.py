@@ -79,7 +79,7 @@ class TriageAgent:
 
         reopenable_statuses = (IncidentStatus.new, IncidentStatus.notified, IncidentStatus.in_progress)
         if reasoning.needs_human_verification and incident.status in reopenable_statuses:
-            incident.status = IncidentStatus.awaiting_approval
+            incident.status = IncidentStatus.needs_review
 
         await incident_repo.replace(incident)
 

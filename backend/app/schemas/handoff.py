@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Union
+from typing import List, Optional, Union
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -53,5 +53,5 @@ class AgentHandoffResponse(BaseModel):
     detection: Detection
     assessment: Assessment
     incident: Incident
-    assignment: Assignment
+    assignment: Optional[Assignment] = None
     warnings: List[str]

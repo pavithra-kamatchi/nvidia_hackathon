@@ -6,7 +6,7 @@ from app.agents.notification import notification_agent
 from app.agents.perception import perception_agent
 from app.agents.triage import triage_agent
 from app.repositories.images import store_image
-from app.schemas.common import Coordinate
+from app.schemas.common import Coordinate, IncidentStatus
 from app.schemas.ingest import IngestResponse
 
 
@@ -31,6 +31,15 @@ async def run_pipeline(image_bytes: bytes, content_type: str, coordinate: Coordi
         incident_id=incident.incident_id,
         payload={"detection_id": detection.detection_id, "assessment_id": assessment.assessment_id},
     )
+
+    if incident.status == IncidentStatus.needs_review:
+        await monitoring_agent.log(
+            "incident_needs_review",
+            f"Incident {incident.incident_id} urgency is uncertain; holding for operator review "
+            "before it reaches the dispatch queue.",
+            incident_id=incident.incident_id,
+        )
+        return IngestResponse(detection=detection, assessment=assessment, incident=incident, assignment=None)
 
     assignment = await coordinator_agent.run(incident)
     await monitoring_agent.log(

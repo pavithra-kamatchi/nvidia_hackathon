@@ -65,11 +65,11 @@ async def agent_handoff(payload: AgentHandoffRequest):
         location=triage.location,
         incident_type=triage.incident_type,
         urgency=triage.urgency,
-        status=IncidentStatus.awaiting_approval,
+        status=IncidentStatus.needs_review if needs_human else IncidentStatus.new,
         number_of_people=perception.number_of_people,
         first_uploaded=perception.timestamp,
         last_updated=now,
-        needs_human_verification=True,
+        needs_human_verification=needs_human,
     )
     await incident_repo.insert(incident)
 
@@ -94,8 +94,10 @@ async def agent_handoff(payload: AgentHandoffRequest):
         actor_id="perception-triage-handoff",
     )
 
-    assignment = await coordinator_agent.run(incident)
-    incident = await notification_agent.run(incident, assignment)
+    assignment = None
+    if incident.status != IncidentStatus.needs_review:
+        assignment = await coordinator_agent.run(incident)
+        incident = await notification_agent.run(incident, assignment)
     return AgentHandoffResponse(
         detection=detection,
         assessment=assessment,

@@ -71,6 +71,12 @@ def _deterministic_assessment(
         urgency = Urgency.high if len(concerning) >= 2 else Urgency.medium
         incident_type = "injury"
         reasons.append(f"{len(concerning)} non-upright pose detection(s): {', '.join(concerning)}")
+    elif detection.human and has_hazard and detection.number_of_people >= 2:
+        urgency, incident_type = Urgency.high, "multiple_people_near_hazard"
+        reasons.append(
+            f"{detection.number_of_people} people were reported near this visible hazard: "
+            f"{detection.visible_hazards}"
+        )
     elif detection.human and has_hazard:
         urgency, incident_type = Urgency.medium, "person_near_hazard"
         reasons.append(f"a person was reported near this visible hazard: {detection.visible_hazards}")
@@ -139,11 +145,26 @@ class LocalNemotronReasoner:
         }
         prompt = (
             "Classify this emergency observation using only the supplied evidence. Do not make a "
-            "medical diagnosis and do not claim facts not present in the evidence. Return exactly "
-            "one JSON object with: urgency (high, medium, low, or unclear), incident_type (short "
-            "snake_case string), reasoning (one or two concise evidence-based sentences), "
-            "confidence (0 to 1), needs_human_verification (boolean). Use unclear and require human "
-            "verification when evidence is insufficient or conflicting. Evidence: "
+            "medical diagnosis and do not claim facts not present in the evidence.\n\n"
+            "Urgency determination rules, in order:\n"
+            "1. If visible_blood is true, urgency MUST be \"high\" regardless of any other factor.\n"
+            "2. Otherwise, classify urgency using this rubric:\n"
+            "HIGH — person is lying/unresponsive-looking near an active hazard; person is in "
+            "immediate proximity to fire, smoke, flood, traffic, collapse, etc.; multiple people "
+            "appear endangered; visible severe collision / active fire / structural collapse; "
+            "situation appears to require immediate responder attention.\n"
+            "MEDIUM — person is in a potentially dangerous situation but no immediate severe threat "
+            "is visible; person appears injured but mobile; hazard exists nearby but is not "
+            "immediately threatening the person; incident could worsen if not addressed soon.\n"
+            "LOW — person detected with no visible immediate hazard; minor incident / non-urgent "
+            "condition; person appears mobile and not in immediate danger.\n"
+            "UNCLEAR — image quality is poor; person is partially obscured; hazard cannot be "
+            "identified confidently; conflicting evidence; insufficient information to distinguish "
+            "low/medium/high.\n\n"
+            "Return exactly one JSON object with: urgency (high, medium, low, or unclear), "
+            "incident_type (short snake_case string), reasoning (one or two concise evidence-based "
+            "sentences), confidence (0 to 1), needs_human_verification (boolean). Use unclear and "
+            "require human verification when evidence is insufficient or conflicting. Evidence: "
             + json.dumps(evidence)
         )
         body = json.dumps(
@@ -179,13 +200,15 @@ class LocalNemotronReasoner:
                 raise ValueError("needs_human_verification must be boolean")
 
             # Deterministic safety rules override any less-cautious model result.
-            evidence_conflict = (
-                urgency == Urgency.low
-                and (detection.blood or bool(poses) and any(
-                    pose.pose.value in ("lying", "kneeling", "bent") for pose in poses
-                ))
-            )
-            if evidence_conflict:
+            evidence_conflict = False
+            if detection.blood and urgency != Urgency.high:
+                evidence_conflict = True
+                urgency = Urgency.high
+                reasoning += " Overridden to high urgency because visible blood was detected."
+            elif urgency == Urgency.low and bool(poses) and any(
+                pose.pose.value in ("lying", "kneeling", "bent") for pose in poses
+            ):
+                evidence_conflict = True
                 urgency = Urgency.unclear
                 reasoning += " The low-urgency classification conflicts with visible evidence."
             needs_human = (

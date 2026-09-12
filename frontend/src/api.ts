@@ -111,6 +111,7 @@ export async function updateStation(
 
 export const ALL_STATUSES: IncidentStatus[] = [
   "new",
+  "needs_review",
   "awaiting_approval",
   "notified",
   "dispatched",

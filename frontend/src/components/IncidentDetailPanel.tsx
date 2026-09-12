@@ -89,7 +89,7 @@ export function IncidentDetailPanel({
     onIncidentUpdate(
       updated ?? {
         ...incident,
-        status: approved ? "notified" : "false_positive",
+        status: approved ? "awaiting_approval" : "false_positive",
         needs_human_verification: false,
       },
     );

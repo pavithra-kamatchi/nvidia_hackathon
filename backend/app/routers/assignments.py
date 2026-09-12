@@ -7,6 +7,7 @@ from app.agents.coordinator import coordinator_agent
 from app.agents.monitoring import monitoring_agent
 from app.repositories.collections import assignment_repo, incident_repo
 from app.schemas.assignment import Assignment
+from app.schemas.common import IncidentStatus
 
 router = APIRouter(tags=["assignments"])
 
@@ -97,8 +98,11 @@ async def simulate_notification(assignment_id: str):
 
 @router.post("/assignments/{assignment_id}/respond", response_model=Assignment)
 async def respond_to_assignment(assignment_id: str, payload: RespondRequest):
-    """Agent 4's feasibility check made concrete: a station rejecting closes
-    the loop back to Agent 3, which re-plans against every other station."""
+    """A station accepting or rejecting its proposed dispatch from the
+    incident queue. Accepting means the station commits to dispatching its
+    people and moves the incident out of awaiting_approval into dispatched.
+    Rejecting closes the loop back to Agent 3, which re-plans against every
+    other station."""
     assignment = await assignment_repo.get(assignment_id)
     if assignment is None:
         raise HTTPException(status_code=404, detail="Assignment not found")
@@ -109,9 +113,16 @@ async def respond_to_assignment(assignment_id: str, payload: RespondRequest):
         if payload.station_id in assignment.rejected_station_ids:
             assignment.rejected_station_ids.remove(payload.station_id)
         await assignment_repo.replace(assignment)
+
+        incident = await incident_repo.get(assignment.incident_id)
+        if incident is not None and incident.status == IncidentStatus.awaiting_approval:
+            incident.status = IncidentStatus.dispatched
+            incident.last_updated = datetime.now(timezone.utc)
+            await incident_repo.replace(incident)
+
         await monitoring_agent.log(
             "assignment_accepted",
-            f"Station {payload.station_id} accepted assignment {assignment_id}.",
+            f"Station {payload.station_id} accepted assignment {assignment_id}; dispatching responders.",
             incident_id=assignment.incident_id,
         )
         return assignment

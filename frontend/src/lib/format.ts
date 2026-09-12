@@ -14,6 +14,7 @@ export function formatCoordinate(lat: number, lon: number): string {
 
 export const STATUS_LABEL: Record<IncidentStatus, string> = {
   new: "New",
+  needs_review: "Needs Review",
   awaiting_approval: "Awaiting Approval",
   notified: "Notified",
   dispatched: "Dispatched",
@@ -24,6 +25,7 @@ export const STATUS_LABEL: Record<IncidentStatus, string> = {
 
 export const STATUS_DOT: Record<IncidentStatus, string> = {
   new: "bg-blue-500",
+  needs_review: "bg-red-500",
   awaiting_approval: "bg-amber-500",
   notified: "bg-amber-500",
   dispatched: "bg-violet-500",
@@ -34,6 +36,7 @@ export const STATUS_DOT: Record<IncidentStatus, string> = {
 
 export const STATUS_PILL: Record<IncidentStatus, string> = {
   new: "bg-blue-50 text-blue-700",
+  needs_review: "bg-red-50 text-red-700",
   awaiting_approval: "bg-amber-50 text-amber-700",
   notified: "bg-amber-50 text-amber-700",
   dispatched: "bg-violet-50 text-violet-700",

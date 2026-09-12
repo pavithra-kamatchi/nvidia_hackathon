@@ -8,8 +8,10 @@ from app.schemas.incident import Incident
 class NotificationAgent:
     """Agent 4. Posts a proposal to the dashboard without contacting anyone.
 
-    Every proposed allocation requires a human decision. External station and
-    911 actions are simulations handled by the explicit notification route.
+    Puts the incident into the dispatch queue (awaiting_approval): stations
+    see it there and accept/reject via /assignments/{id}/respond, stating
+    whether they will dispatch their people. External station and 911 calls
+    are simulations handled by the explicit notification route.
     """
 
     async def run(self, incident: Incident, assignment: Assignment) -> Incident:
@@ -21,11 +23,10 @@ class NotificationAgent:
         )
 
         incident.status = IncidentStatus.awaiting_approval
-        incident.needs_human_verification = True
         await incident_repo.replace(incident)
         await monitoring_agent.log(
-            event_type="allocation_awaiting_human_approval",
-            summary=f"Allocation {assignment.assignment_id} is awaiting human approval; no notification was sent.",
+            event_type="allocation_awaiting_station_response",
+            summary=f"Allocation {assignment.assignment_id} is in the dispatch queue awaiting station acceptance.",
             incident_id=incident.incident_id,
             payload={"assignment_id": assignment.assignment_id},
             actor_type="agent",
