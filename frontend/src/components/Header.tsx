@@ -52,7 +52,7 @@ export function Header({
               SCOUT<span className="text-amber-600">.</span>
             </div>
             <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-stone-400">
-              AI for Public Safety
+              AI for Safety
             </div>
           </div>
         </div>

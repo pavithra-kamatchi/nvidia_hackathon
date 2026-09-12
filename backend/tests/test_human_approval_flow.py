@@ -2,6 +2,8 @@ import unittest
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, patch
 
+from fastapi import HTTPException
+
 from app.routers.assignments import simulate_notification
 from app.routers.incidents import ReviewRequest, review_incident
 from app.schemas.assignment import Assignment
@@ -94,6 +96,36 @@ class HumanApprovalFlowTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(assignment.status, "notified")
         replace_incident.assert_awaited_once()
         replace_assignment.assert_awaited_once()
+
+    async def test_resolved_incident_cannot_be_notified(self):
+        incident = _incident()
+        incident.status = IncidentStatus.resolved
+        now = datetime.now(timezone.utc)
+        assignment = Assignment(
+            assignment_id="asg-test",
+            incident_id=incident.incident_id,
+            assigned_station_ids=["station-test"],
+            recommended_resources={"fire": 1},
+            priority=1,
+            rationale="Test allocation.",
+            escalate_to_911=True,
+            requires_multi_station=False,
+            requires_additional_support=False,
+            status="approved",
+            accepted_station_ids=[],
+            rejected_station_ids=[],
+            created_at=now,
+            decision="approved",
+            decided_by="operator-test",
+            decided_at=now,
+        )
+        with (
+            patch("app.routers.assignments.assignment_repo.get", AsyncMock(return_value=assignment)),
+            patch("app.routers.assignments.incident_repo.get", AsyncMock(return_value=incident)),
+        ):
+            with self.assertRaises(HTTPException) as raised:
+                await simulate_notification(assignment.assignment_id)
+        self.assertEqual(raised.exception.status_code, 409)
 
 
 if __name__ == "__main__":

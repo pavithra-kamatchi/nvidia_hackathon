@@ -28,17 +28,40 @@ function InfoRow({
   icon,
   label,
   value,
+  valueClassName = "text-neutral-900",
 }: {
   icon: React.ReactNode;
   label: string;
   value: string;
+  valueClassName?: string;
 }) {
   return (
-    <div className="flex items-start gap-3 py-1.5">
+    <div className="grid grid-cols-[1.25rem_8rem_minmax(0,1fr)] items-start gap-3 py-1.5">
       <div className="mt-0.5 text-neutral-400">{icon}</div>
-      <div className="w-32 shrink-0 text-sm text-neutral-500">{label}</div>
-      <div className="text-sm font-semibold text-neutral-900">{value}</div>
+      <div className="text-sm text-neutral-500">{label}</div>
+      <div className={`min-w-0 break-words text-sm font-semibold ${valueClassName}`}>{value}</div>
     </div>
+  );
+}
+
+function PlanBadge({
+  label,
+  tone = "neutral",
+}: {
+  label: string;
+  tone?: "neutral" | "warning" | "success";
+}) {
+  const toneClass =
+    tone === "warning"
+      ? "border-amber-200 bg-amber-50 text-amber-900"
+      : tone === "success"
+        ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+        : "border-stone-200 bg-white text-stone-700";
+
+  return (
+    <span className={`inline-flex items-center border px-2 py-1 text-[11px] font-bold ${toneClass}`}>
+      {label}
+    </span>
   );
 }
 
@@ -153,41 +176,71 @@ export function IncidentDetailPanel({
     incident.assignment?.decision === "rejected"
       ? "Allocation Rejected"
       : STATUS_LABEL[incident.status];
+  const statusTextClass =
+    incident.status === "resolved"
+      ? "text-emerald-700"
+      : incident.status === "false_positive"
+        ? "text-neutral-500"
+        : "text-stone-900";
   const showHazards = hasReportedHazard(incident.visible_hazards);
+  const assignmentDecision = incident.assignment?.decision
+    ? formatIncidentType(incident.assignment.decision)
+    : "Pending Review";
+  const hasStationRecommendation = Boolean(
+    incident.assignment?.assigned_station_ids.length,
+  );
+  const canSimulateNotification =
+    incident.assignment?.decision === "approved"
+    && incident.status === "awaiting_approval";
 
   return (
     <section className="panel flex h-full flex-col overflow-hidden">
-      <div className="flex shrink-0 items-center justify-between gap-4 border-b border-stone-100 bg-stone-50/80 px-5 py-3">
-        <span className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-stone-500">
-          Selected incident
-        </span>
-        <span className="truncate font-mono text-[11px] text-stone-400">
-          #{incident.incident_id}
-        </span>
+      <div className="flex shrink-0 items-center justify-between gap-3 border-b border-stone-100 bg-stone-50/80 px-5 py-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex min-w-0 items-center gap-2">
+            <AlertTriangleIcon
+              className={`h-6 w-6 shrink-0 ${URGENCY_TEXT[incident.urgency]}`}
+            />
+            <span
+              className={`text-xl font-extrabold ${URGENCY_TEXT[incident.urgency]}`}
+            >
+              {URGENCY_LABEL[incident.urgency]}
+            </span>
+          </div>
+          <div className="h-6 w-px bg-neutral-200" />
+          <div className="flex min-w-0 items-center gap-2">
+            <FlameIcon className="h-5 w-5 shrink-0 text-orange-500" />
+            <span className="truncate text-base font-bold text-stone-900">
+              {formatIncidentType(incident.incident_type)}
+            </span>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={handleReport}
+          disabled={reporting}
+          className="shrink-0 rounded-none border border-stone-400 px-2.5 py-1 text-[10px] font-bold text-stone-600 transition hover:border-stone-600 hover:bg-white hover:text-stone-900 disabled:opacity-60"
+        >
+          <span className="hidden sm:inline">
+            {reporting ? "Preparing report..." : "Download incident report"}
+          </span>
+          <span className="sm:hidden">{reporting ? "Preparing..." : "Report"}</span>
+        </button>
       </div>
 
-      <div className="flex shrink-0 items-center gap-3 px-5 pb-3 pt-3">
-        <div className="flex min-w-0 items-center gap-2">
-          <AlertTriangleIcon
-            className={`h-6 w-6 shrink-0 ${URGENCY_TEXT[incident.urgency]}`}
-          />
-          <span
-            className={`text-xl font-extrabold ${URGENCY_TEXT[incident.urgency]}`}
-          >
-            {URGENCY_LABEL[incident.urgency]}
-          </span>
-        </div>
-        <div className="h-6 w-px bg-neutral-200" />
-        <div className="flex min-w-0 items-center gap-2">
-          <FlameIcon className="h-5 w-5 shrink-0 text-orange-500" />
-          <span className="truncate text-base font-bold text-stone-900">
-            {formatIncidentType(incident.incident_type)}
-          </span>
-        </div>
-      </div>
-
-      <div className="incident-queue-scroll min-h-0 flex-1 overflow-y-auto border-t border-neutral-100">
+      <div className="incident-queue-scroll min-h-0 flex-1 overflow-y-auto">
         <div className="divide-y divide-neutral-100 px-5 py-1">
+          <InfoRow
+            icon={<AlertTriangleIcon className="h-5 w-5" />}
+            label="Incident ID"
+            value={`#${incident.incident_id}`}
+          />
+          <InfoRow
+            icon={<AlertTriangleIcon className="h-5 w-5" />}
+            label="Current State"
+            value={displayStatus}
+            valueClassName={statusTextClass}
+          />
           <InfoRow
             icon={<MapPinIcon className="h-5 w-5" />}
             label="Location"
@@ -222,20 +275,72 @@ export function IncidentDetailPanel({
         )}
 
         {incident.assignment && (
-          <div className="mx-5 my-3 border border-stone-200 bg-stone-50 p-3 text-xs text-stone-700">
-            <div className="font-bold uppercase tracking-[0.1em] text-stone-500">
-              Proposed allocation
+          <div className="mx-5 my-3 border border-stone-200 bg-white p-3 text-xs text-stone-700">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-stone-500">
+                  Response plan
+                </div>
+                <div className="mt-1 text-sm font-bold text-stone-950">
+                  {hasStationRecommendation
+                    ? "Recommend local station response"
+                    : "Manual dispatch required"}
+                </div>
+              </div>
+              <PlanBadge
+                label={assignmentDecision}
+                tone={
+                  incident.assignment.decision === "approved"
+                    ? "success"
+                    : incident.assignment.decision === "rejected"
+                      ? "warning"
+                      : "neutral"
+                }
+              />
             </div>
-            <div className="mt-2">
-              Recommended station(s): {incident.assignment.assigned_station_ids.join(", ") || "No available station"}
+
+            <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <div className="border border-stone-100 bg-stone-50 px-3 py-2">
+                <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-stone-400">
+                  Station
+                </div>
+                <div className="mt-1 break-words text-sm font-semibold text-stone-900">
+                  {incident.assignment.assigned_station_ids.join(", ") || "No available station"}
+                </div>
+              </div>
+              <div className="border border-stone-100 bg-stone-50 px-3 py-2">
+                <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-stone-400">
+                  Escalation
+                </div>
+                <div className="mt-1 text-sm font-semibold text-stone-900">
+                  {incident.assignment.escalate_to_911 ? "911 recommended" : "Local response"}
+                </div>
+              </div>
             </div>
-            <div className="mt-1 text-stone-500">
-              Alert broadcasts to every registered station; the recommendation above is the
-              nearest station with available capacity.
+
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              <PlanBadge
+                label={
+                  incident.assignment.requires_multi_station
+                    ? "Multi-station"
+                    : "Single station"
+                }
+              />
+              {incident.assignment.requires_additional_support && (
+                <PlanBadge label="Needs backup" tone="warning" />
+              )}
+              {Object.entries(incident.assignment.recommended_resources).map(
+                ([resource, count]) => (
+                  <PlanBadge
+                    key={resource}
+                    label={`${formatIncidentType(resource)} x${count}`}
+                  />
+                ),
+              )}
             </div>
-            <div className="mt-1">{formatAssignmentRationale(incident.assignment.rationale)}</div>
-            <div className="mt-1 font-semibold">
-              Decision: {incident.assignment.decision ? formatIncidentType(incident.assignment.decision) : "Awaiting Operator"}
+
+            <div className="mt-3 border-t border-stone-100 pt-2 text-xs leading-relaxed text-stone-500">
+              {formatAssignmentRationale(incident.assignment.rationale)}
             </div>
           </div>
         )}
@@ -279,15 +384,6 @@ export function IncidentDetailPanel({
           </div>
         )}
 
-        <div className="flex items-center justify-between pb-3">
-          <span className="text-xs font-bold uppercase tracking-[0.1em] text-stone-500">
-            Status
-          </span>
-          <span className="border border-stone-200 bg-white px-3 py-2 text-sm font-semibold text-stone-800">
-            {displayStatus}
-          </span>
-        </div>
-
         {incident.assignment && !incident.needs_human_verification && !incident.assignment.decision && (
           <div className="mb-2 grid grid-cols-2 gap-2">
             <button
@@ -309,7 +405,7 @@ export function IncidentDetailPanel({
           </div>
         )}
 
-        {incident.assignment?.decision === "approved" && incident.status !== "notified" && (
+        {canSimulateNotification && (
           <button
             type="button"
             onClick={handleNotification}
@@ -331,14 +427,6 @@ export function IncidentDetailPanel({
             Mark incident resolved
           </button>
         )}
-        <button
-          type="button"
-          onClick={handleReport}
-          disabled={reporting}
-          className="mt-2 flex w-full items-center justify-center rounded-none py-2 text-xs font-bold text-stone-500 transition hover:bg-stone-50 hover:text-stone-800 disabled:opacity-60"
-        >
-          {reporting ? "Preparing report..." : "Download incident report"}
-        </button>
       </div>
     </section>
   );

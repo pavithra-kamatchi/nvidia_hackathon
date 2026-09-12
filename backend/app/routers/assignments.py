@@ -84,13 +84,17 @@ async def simulate_notification(assignment_id: str):
     incident = await incident_repo.get(assignment.incident_id)
     if incident is None:
         raise HTTPException(status_code=404, detail="Incident not found")
+    if incident.status != IncidentStatus.awaiting_approval:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Cannot notify stations when incident status is {incident.status.value}",
+        )
 
     all_station_ids = [s.station_id for s in await station_repo.list()]
     await monitoring_agent.log(
         "simulated_notification",
         f"Simulated notification broadcast to all {len(all_station_ids)} registered station(s) for allocation "
-        f"{assignment_id} (recommended: {', '.join(assignment.assigned_station_ids) or 'none available'}); "
-        "no real call or message was made.",
+        f"{assignment_id} (recommended: {', '.join(assignment.assigned_station_ids) or 'none available'}).",
         incident_id=assignment.incident_id,
         payload={
             "notified_station_ids": all_station_ids,
@@ -109,7 +113,7 @@ async def simulate_notification(assignment_id: str):
         "status": "simulated",
         "assignment_id": assignment_id,
         "incident": incident,
-        "message": "No real station notification or 911 call was made.",
+        "message": "Station notification simulated.",
     }
 
 
