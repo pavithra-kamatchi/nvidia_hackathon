@@ -15,6 +15,7 @@ import {
   formatIncidentType,
   hasReportedHazard,
 } from "../lib/format";
+import { buildHumanIncidentReport } from "../lib/incidentReport";
 import type { Incident } from "../types";
 import {
   AlertTriangleIcon,
@@ -161,13 +162,13 @@ export function IncidentDetailPanel({
       return;
     }
     setReporting(false);
-    const blob = new Blob([JSON.stringify(report, null, 2)], {
-      type: "application/json",
+    const blob = new Blob([buildHumanIncidentReport(report)], {
+      type: "text/html;charset=utf-8",
     });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `${incident.incident_id}-report.json`;
+    link.download = `${incident.incident_id}-reviewer-report.html`;
     link.click();
     URL.revokeObjectURL(url);
   }
@@ -222,7 +223,7 @@ export function IncidentDetailPanel({
           className="shrink-0 rounded-none border border-stone-400 px-2.5 py-1 text-[10px] font-bold text-stone-600 transition hover:border-stone-600 hover:bg-white hover:text-stone-900 disabled:opacity-60"
         >
           <span className="hidden sm:inline">
-            {reporting ? "Preparing report..." : "Download incident report"}
+            {reporting ? "Preparing report..." : "Download reviewer report"}
           </span>
           <span className="sm:hidden">{reporting ? "Preparing..." : "Report"}</span>
         </button>
