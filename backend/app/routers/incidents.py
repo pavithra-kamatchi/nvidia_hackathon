@@ -98,14 +98,14 @@ async def dispatch_incident(incident_id: str, payload: DispatchRequest):
 
     await monitoring_agent.log(
         "simulated_dispatch",
-        f"Simulated dispatch to station(s) {payload.station_ids}; no real station or 911 call was made.",
+        f"Simulated dispatch to station(s) {payload.station_ids}.",
         incident_id=incident_id,
         payload={"station_ids": payload.station_ids, "assignment_id": assignments[0].assignment_id},
     )
     return {
         "status": "simulated",
         "incident_id": incident_id,
-        "message": "No real station notification, dispatch, or 911 call was made.",
+        "message": "Dispatch simulation recorded.",
     }
 
 

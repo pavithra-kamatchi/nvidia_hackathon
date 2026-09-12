@@ -9,6 +9,11 @@ import {
 } from "../lib/format";
 import type { Incident } from "../types";
 
+const CLOSED_STATUSES = new Set<Incident["status"]>([
+  "resolved",
+  "false_positive",
+]);
+
 export function IncidentQueue({
   incidents,
   selectedId,
@@ -18,6 +23,15 @@ export function IncidentQueue({
   selectedId: string | undefined;
   onSelect: (id: string) => void;
 }) {
+  const orderedIncidents = [...incidents].sort((a, b) => {
+    const aClosed = CLOSED_STATUSES.has(a.status);
+    const bClosed = CLOSED_STATUSES.has(b.status);
+    if (aClosed !== bClosed) return aClosed ? 1 : -1;
+    return (
+      new Date(b.last_updated).getTime() - new Date(a.last_updated).getTime()
+    );
+  });
+
   function handleRowKeyDown(
     event: KeyboardEvent<HTMLTableRowElement>,
     incidentId: string,
@@ -37,18 +51,22 @@ export function IncidentQueue({
       </div>
 
       <section className="panel flex min-h-0 flex-1 flex-col overflow-hidden">
-        <div className="incident-queue-scroll min-h-0 flex-1 overflow-y-auto">
+        <div className="grid shrink-0 grid-cols-[1fr_2fr_1.7fr_1.5fr] border-y border-stone-100 bg-white text-left text-[10px] font-bold uppercase tracking-[0.1em] text-stone-400">
+          <div className="px-5 py-2 font-semibold">Time</div>
+          <div className="px-2 py-2 font-semibold">ID</div>
+          <div className="px-2 py-2 font-semibold">Type</div>
+          <div className="px-5 py-2 font-semibold">Status</div>
+        </div>
+        <div className="incident-queue-scroll min-h-0 flex-1 overscroll-contain overflow-y-auto">
           <table className="w-full border-collapse text-base">
-            <thead>
-              <tr className="sticky top-0 border-y border-stone-100 bg-stone-50/80 text-left text-[10px] font-bold uppercase tracking-[0.1em] text-stone-400">
-                <th scope="col" className="px-5 py-2 font-semibold">Time</th>
-                <th scope="col" className="px-2 py-2 font-semibold">ID</th>
-                <th scope="col" className="px-2 py-2 font-semibold">Type</th>
-                <th scope="col" className="px-5 py-2 font-semibold">Status</th>
-              </tr>
-            </thead>
+            <colgroup>
+              <col className="w-[16.13%]" />
+              <col className="w-[32.26%]" />
+              <col className="w-[27.42%]" />
+              <col className="w-[24.19%]" />
+            </colgroup>
             <tbody>
-              {incidents.map((incident) => {
+              {orderedIncidents.map((incident) => {
                 const displayStatus =
                   incident.assignment?.decision === "rejected"
                     ? "Allocation Rejected"

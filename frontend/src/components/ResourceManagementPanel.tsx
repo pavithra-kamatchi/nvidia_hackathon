@@ -1,7 +1,15 @@
 import { useEffect, useState } from "react";
 import { fetchStations, updateStation } from "../api";
 import type { Station } from "../types";
-import { MinusIcon, PlusIcon, TruckIcon, UsersIcon, WrenchIcon } from "./icons";
+import {
+  ChevronRightIcon,
+  MinusIcon,
+  PlusIcon,
+  TruckIcon,
+  UsersIcon,
+  WrenchIcon,
+  XIcon,
+} from "./icons";
 
 function StepButton({
   onClick,
@@ -62,6 +70,7 @@ export function ResourceManagementPanel({
   onError: (message: string | undefined) => void;
 }) {
   const [station, setStation] = useState<Station>();
+  const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
     fetchStations()
@@ -74,10 +83,25 @@ export function ResourceManagementPanel({
       });
   }, [onError]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setIsOpen(false);
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen]);
+
   if (!station) {
     return (
-      <section className="flex h-full items-center justify-center border border-neutral-200 bg-white p-4 text-sm text-stone-500">
-        No live station data available.
+      <section className="panel flex h-full items-center justify-center p-4 text-sm text-stone-500">
+        <button
+          type="button"
+          disabled
+          className="border border-stone-200 bg-stone-50 px-4 py-3 font-semibold text-stone-400"
+        >
+          No station resources available
+        </button>
       </section>
     );
   }
@@ -116,57 +140,124 @@ export function ResourceManagementPanel({
   }
 
   return (
-    <section className="panel flex h-full flex-col overflow-hidden">
-      <div className="flex shrink-0 items-center justify-between px-5 py-3">
-        <div>
-          <p className="eyebrow">Readiness</p>
-          <h2 className="mt-0.5 text-base font-bold text-stone-900">
-            Resource management
-          </h2>
-        </div>
-        <span className="hidden text-xs font-medium text-stone-400 sm:block">
-          {station.name}
+    <section className="panel flex h-full items-center justify-center overflow-hidden p-4">
+      <button
+        type="button"
+        onClick={() => setIsOpen(true)}
+        className="flex w-full max-w-sm items-center justify-between gap-4 border border-stone-200 bg-white px-5 py-4 text-left shadow-sm transition hover:border-stone-300 hover:bg-stone-50"
+      >
+        <span className="flex min-w-0 items-center gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center border border-stone-200 bg-stone-50 text-stone-600">
+            <WrenchIcon className="h-5 w-5" />
+          </span>
+          <span className="min-w-0">
+            <span className="block text-sm font-bold text-stone-950">
+              Manage station resources
+            </span>
+            <span className="block truncate text-xs font-medium text-stone-500">
+              {station.name}
+            </span>
+          </span>
         </span>
-      </div>
+        <ChevronRightIcon className="h-5 w-5 shrink-0 text-stone-400" />
+      </button>
 
-      <div className="min-h-0 flex-1 space-y-2.5 overflow-y-auto px-5 pb-3">
-        <div className="grid grid-cols-4 gap-2">
-          {station.responder_types.map((type) => (
-            <Counter
-              key={type}
-              icon={<UsersIcon className="h-4 w-4" />}
-              label={type}
-              value={station.available_responders[type] ?? 0}
-              onDecrement={() => adjustResponder(type, -1)}
-              onIncrement={() => adjustResponder(type, 1)}
-            />
-          ))}
-          <Counter
-            icon={<TruckIcon className="h-4 w-4" />}
-            label="Vehicles"
-            value={station.available_vehicles}
-            onDecrement={() => adjustVehicles(-1)}
-            onIncrement={() => adjustVehicles(1)}
-          />
-        </div>
-
-        <div>
-          <div className="mb-1.5 flex items-center gap-1.5 text-sm text-neutral-500">
-            <WrenchIcon className="h-4 w-4" />
-            Equipment
-          </div>
-          <div className="flex flex-wrap gap-1.5">
-            {station.available_equipment.map((item) => (
-              <span
-                key={item}
-                className="rounded-none bg-neutral-100 px-2.5 py-1 text-sm font-medium text-neutral-700"
+      {isOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-stone-950/45 px-4 backdrop-blur-sm"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setIsOpen(false);
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="resource-management-title"
+            className="flex max-h-[86dvh] w-full max-w-2xl flex-col overflow-hidden border border-stone-200 bg-white shadow-2xl"
+          >
+            <div className="flex shrink-0 items-start justify-between gap-4 border-b border-stone-100 px-5 py-4">
+              <div>
+                <p className="eyebrow">Readiness</p>
+                <h2
+                  id="resource-management-title"
+                  className="mt-1 text-xl font-bold text-stone-950"
+                >
+                  Manage station resources
+                </h2>
+                <p className="mt-1 text-sm font-medium text-stone-500">
+                  {station.name}
+                </p>
+              </div>
+              <button
+                type="button"
+                aria-label="Close resource management"
+                onClick={() => setIsOpen(false)}
+                className="flex h-9 w-9 shrink-0 items-center justify-center border border-stone-200 text-stone-500 transition hover:bg-stone-50 hover:text-stone-900"
               >
-                {item}
+                <XIcon className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="incident-queue-scroll min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4">
+              <div>
+                <div className="mb-2 flex items-center gap-2 text-sm font-bold text-stone-800">
+                  <UsersIcon className="h-4 w-4 text-stone-500" />
+                  Responders and vehicles
+                </div>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {station.responder_types.map((type) => (
+                    <Counter
+                      key={type}
+                      icon={<UsersIcon className="h-4 w-4" />}
+                      label={type}
+                      value={station.available_responders[type] ?? 0}
+                      onDecrement={() => adjustResponder(type, -1)}
+                      onIncrement={() => adjustResponder(type, 1)}
+                    />
+                  ))}
+                  <Counter
+                    icon={<TruckIcon className="h-4 w-4" />}
+                    label="Vehicles"
+                    value={station.available_vehicles}
+                    onDecrement={() => adjustVehicles(-1)}
+                    onIncrement={() => adjustVehicles(1)}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <div className="mb-2 flex items-center gap-2 text-sm font-bold text-stone-800">
+                  <WrenchIcon className="h-4 w-4 text-stone-500" />
+                  Equipment inventory
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {station.available_equipment.map((item) => (
+                    <span
+                      key={item}
+                      className="bg-neutral-100 px-2.5 py-1 text-sm font-medium text-neutral-700"
+                    >
+                      {item}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex shrink-0 items-center justify-between gap-3 border-t border-stone-100 bg-stone-50 px-5 py-3">
+              <span className="text-xs font-medium text-stone-500">
+                Updates save immediately to station state.
               </span>
-            ))}
+              <button
+                type="button"
+                onClick={() => setIsOpen(false)}
+                className="bg-stone-950 px-4 py-2 text-sm font-bold text-white transition hover:bg-stone-800"
+              >
+                Done
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </section>
   );
 }
