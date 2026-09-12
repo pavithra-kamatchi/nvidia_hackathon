@@ -67,6 +67,7 @@ class TriageAgent:
                 first_uploaded=timestamp,
                 last_updated=timestamp,
                 needs_human_verification=reasoning.needs_human_verification,
+                blood_detected=detection.blood,
                 image_url=image_url,
             )
         else:
@@ -75,6 +76,9 @@ class TriageAgent:
             incident.number_of_people = detection.number_of_people
             incident.last_updated = timestamp
             incident.needs_human_verification = reasoning.needs_human_verification
+            # Sticky: once blood has been seen on any frame folded into this
+            # incident, a later frame without it should not un-flag it.
+            incident.blood_detected = incident.blood_detected or detection.blood
             incident.image_url = image_url or incident.image_url
 
         reopenable_statuses = (IncidentStatus.new, IncidentStatus.notified, IncidentStatus.in_progress)

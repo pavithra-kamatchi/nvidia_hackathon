@@ -133,6 +133,25 @@ async def respond_to_assignment(assignment_id: str, payload: RespondRequest):
             assignment.accepted_station_ids.append(payload.station_id)
         if payload.station_id in assignment.rejected_station_ids:
             assignment.rejected_station_ids.remove(payload.station_id)
+
+        station = await station_repo.get(payload.station_id)
+        if station is not None:
+            # Only deduct what this station actually has on hand for each
+            # needed responder type, capped by the coordinator's recommended
+            # amount, so a station can never go negative.
+            sent = {
+                responder_type: min(station.available_responders.get(responder_type, 0), amount)
+                for responder_type, amount in assignment.recommended_resources.items()
+                if responder_type in station.responder_types
+                and min(station.available_responders.get(responder_type, 0), amount) > 0
+            }
+            for responder_type, amount in sent.items():
+                station.available_responders[responder_type] -= amount
+            if assignment.incident_id not in station.current_deployments:
+                station.current_deployments.append(assignment.incident_id)
+            await station_repo.replace(station)
+            assignment.resource_commitments[payload.station_id] = sent
+
         await assignment_repo.replace(assignment)
 
         incident = await incident_repo.get(assignment.incident_id)
@@ -145,7 +164,31 @@ async def respond_to_assignment(assignment_id: str, payload: RespondRequest):
             "assignment_accepted",
             f"Station {payload.station_id} accepted assignment {assignment_id}; dispatching responders.",
             incident_id=assignment.incident_id,
+            payload={"assignment_id": assignment_id, "committed_resources": assignment.resource_commitments.get(payload.station_id, {})},
         )
+
+        # Multi-station incidents that still have an un-accepted recommended
+        # station, or incidents Agent 3 already flagged as under-covered,
+        # still need more hands — alert every other registered station.
+        still_needs_help = assignment.requires_additional_support or (
+            assignment.requires_multi_station
+            and any(sid not in assignment.accepted_station_ids for sid in assignment.assigned_station_ids)
+        )
+        if still_needs_help:
+            other_station_ids = [
+                s.station_id for s in await station_repo.list() if s.station_id not in assignment.accepted_station_ids
+            ]
+            if other_station_ids:
+                await monitoring_agent.log(
+                    "additional_help_requested",
+                    f"Incident {assignment.incident_id} still needs additional support after station "
+                    f"{payload.station_id} dispatched; alerting station(s) {', '.join(other_station_ids)}.",
+                    incident_id=assignment.incident_id,
+                    payload={"assignment_id": assignment_id, "alerted_station_ids": other_station_ids},
+                    actor_type="agent",
+                    actor_id="administrative-agent",
+                )
+
         return assignment
 
     if payload.station_id not in assignment.rejected_station_ids:

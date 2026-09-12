@@ -125,11 +125,29 @@ async def resolve_incident(incident_id: str):
         assignment.status = "resolved"
         await assignment_repo.replace(assignment)
 
+    # Credit back exactly what dispatching stations committed, and free up
+    # their vehicle-capacity slot, so the resources are available again for
+    # the next incident's allocation.
     stations = await station_repo.list()
+    station_by_id = {s.station_id: s for s in stations}
+    changed_station_ids = set()
+
+    for assignment in all_assignments:
+        for station_id, commitment in assignment.resource_commitments.items():
+            station = station_by_id.get(station_id)
+            if station is None:
+                continue
+            for responder_type, amount in commitment.items():
+                station.available_responders[responder_type] = station.available_responders.get(responder_type, 0) + amount
+            changed_station_ids.add(station_id)
+
     for station in stations:
         if incident_id in station.current_deployments:
             station.current_deployments.remove(incident_id)
-            await station_repo.replace(station)
+            changed_station_ids.add(station.station_id)
+
+    for station_id in changed_station_ids:
+        await station_repo.replace(station_by_id[station_id])
 
     await monitoring_agent.log(
         "resolved",

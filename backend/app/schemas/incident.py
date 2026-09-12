@@ -16,4 +16,5 @@ class Incident(BaseModel):
     first_uploaded: datetime
     last_updated: datetime
     needs_human_verification: bool
+    blood_detected: bool = False
     image_url: Optional[str] = None

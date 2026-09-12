@@ -117,8 +117,11 @@ class CoordinatorAgent:
                 recommended_resources[responder_type] = min(available, max(1, incident.number_of_people))
 
         no_coverage = not chosen
-        escalate_to_911 = incident.urgency == Urgency.high and (
-            no_coverage or incident.incident_type in _ALWAYS_ESCALATE_INCIDENT_TYPES
+        # Visible blood is an unconditional 911 trigger regardless of the
+        # computed urgency/incident_type, on top of the existing rules below.
+        escalate_to_911 = incident.blood_detected or (
+            incident.urgency == Urgency.high
+            and (no_coverage or incident.incident_type in _ALWAYS_ESCALATE_INCIDENT_TYPES)
         )
 
         if chosen:
@@ -127,6 +130,8 @@ class CoordinatorAgent:
                 f"station(s) with responder types {required_types} for incident_type="
                 f"'{incident.incident_type}' (urgency={incident.urgency.value})."
             )
+            if incident.blood_detected:
+                rationale += " Blood detected in imagery; escalating to 911 as well."
         else:
             rationale = (
                 f"No station currently has available capacity for responder types {required_types}; "
@@ -141,6 +146,7 @@ class CoordinatorAgent:
                 "incident_type": incident.incident_type,
                 "urgency": incident.urgency.value,
                 "number_of_people": incident.number_of_people,
+                "blood_detected": incident.blood_detected,
                 "selected_station_ids": [s.station_id for s in chosen],
                 "recommended_resources": recommended_resources,
                 "requires_additional_support": len(chosen) < take,
