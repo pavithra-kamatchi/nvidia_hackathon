@@ -71,12 +71,12 @@ export function DroneFeedPanel({
           className="absolute inset-0 h-full w-full object-cover brightness-[0.88] saturate-[0.85]"
         />
 
-        <div className="absolute left-4 top-4 rounded-md border border-white/20 bg-stone-950/50 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-white/80 backdrop-blur-sm">
+        <div className="absolute left-4 top-4 rounded-none border border-white/20 bg-stone-950/50 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-white/80 backdrop-blur-sm">
           Camera 01 / Thermal + RGB
         </div>
 
         <label
-          className={`absolute right-4 top-4 flex min-h-10 cursor-pointer items-center gap-2 rounded-md bg-amber-500 px-3 py-2 text-[10px] font-extrabold uppercase tracking-[0.12em] text-stone-950 shadow-lg transition hover:bg-amber-400 ${
+          className={`absolute right-4 top-4 flex min-h-10 cursor-pointer items-center gap-2 rounded-none bg-amber-500 px-3 py-2 text-[10px] font-extrabold uppercase tracking-[0.12em] text-stone-950 shadow-lg transition hover:bg-amber-400 ${
             isUploading ? "pointer-events-none opacity-80" : ""
           }`}
           title="Upload an image for triage"
@@ -93,15 +93,15 @@ export function DroneFeedPanel({
         </label>
 
         {uploadError && (
-          <div className="absolute right-4 top-16 max-w-64 rounded-md border border-red-300 bg-red-50 px-3 py-2 text-xs font-semibold text-red-800 shadow-lg">
+          <div className="absolute right-4 top-16 max-w-64 rounded-none border border-red-300 bg-red-50 px-3 py-2 text-xs font-semibold text-red-800 shadow-lg">
             {uploadError}
           </div>
         )}
 
         {incident && incident.number_of_people > 0 && (
           <div className="absolute left-[38%] top-[49%] -translate-x-1/2 -translate-y-1/2">
-            <div className="relative h-20 w-16 rounded-sm border-2 border-red-500 shadow-[0_0_0_1px_rgba(0,0,0,0.15)]">
-              <div className="absolute -top-7 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-sm bg-red-500 px-2 py-1 text-[11px] font-bold uppercase tracking-wide text-white shadow-lg">
+            <div className="relative h-20 w-16 rounded-none border-2 border-red-500 shadow-[0_0_0_1px_rgba(0,0,0,0.15)]">
+              <div className="absolute -top-7 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-none bg-red-500 px-2 py-1 text-[11px] font-bold uppercase tracking-wide text-white shadow-lg">
                 Person detected
               </div>
             </div>
@@ -109,14 +109,14 @@ export function DroneFeedPanel({
         )}
 
         <div className="absolute inset-x-0 bottom-0 flex items-end justify-between px-4 py-3 text-sm text-neutral-200">
-          <div className="rounded-md border border-white/10 bg-black/35 px-2.5 py-1.5 text-[11px] font-medium backdrop-blur-sm">
+          <div className="rounded-none border border-white/10 bg-black/35 px-2.5 py-1.5 text-[11px] font-medium backdrop-blur-sm">
             DJI M3T&nbsp;&nbsp;|&nbsp;&nbsp;Alt: 120
             m&nbsp;&nbsp;|&nbsp;&nbsp;Zoom: 3.2x
           </div>
 
           <div className="flex flex-col items-end gap-1.5">
             <CompassIcon className="h-5 w-5 text-white" />
-            <div className="flex items-center gap-1.5 rounded-md border border-white/10 bg-black/35 px-2.5 py-1.5 text-[11px] backdrop-blur-sm">
+            <div className="flex items-center gap-1.5 rounded-none border border-white/10 bg-black/35 px-2.5 py-1.5 text-[11px] backdrop-blur-sm">
               <span>0</span>
               <span>0.5</span>
               <span>1&nbsp;km</span>
@@ -126,7 +126,7 @@ export function DroneFeedPanel({
         </div>
 
         {latestLog && (
-          <div className="absolute bottom-4 left-1/2 hidden max-w-[48%] -translate-x-1/2 rounded-md border border-white/10 bg-black/45 px-3 py-2 text-center text-[10px] text-white/80 backdrop-blur-sm md:block">
+          <div className="absolute bottom-4 left-1/2 hidden max-w-[48%] -translate-x-1/2 rounded-none border border-white/10 bg-black/45 px-3 py-2 text-center text-[10px] text-white/80 backdrop-blur-sm md:block">
             <span className="mr-1.5 font-bold uppercase tracking-[0.12em] text-amber-300">
               Agent activity
             </span>

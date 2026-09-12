@@ -17,7 +17,7 @@ function StepButton({
       type="button"
       aria-label={label}
       onClick={onClick}
-      className="flex h-6 w-6 items-center justify-center rounded-full border border-neutral-200 text-neutral-600 transition hover:bg-neutral-100"
+      className="flex h-6 w-6 items-center justify-center rounded-none border border-neutral-200 text-neutral-600 transition hover:bg-neutral-100"
     >
       {children}
     </button>
@@ -38,7 +38,7 @@ function Counter({
   onIncrement: () => void;
 }) {
   return (
-    <div className="flex flex-col gap-1.5 rounded-lg border border-neutral-200 px-2.5 py-1.5">
+    <div className="flex flex-col gap-1.5 rounded-none border border-neutral-200 px-2.5 py-1.5">
       <div className="flex items-center gap-1.5 text-neutral-500">
         {icon}
         <span className="truncate text-sm">{label}</span>
@@ -65,7 +65,7 @@ export function ResourceManagementPanel() {
 
   if (!station) {
     return (
-      <section className="h-full rounded-xl border border-neutral-200 bg-white" />
+      <section className="h-full rounded-none border border-neutral-200 bg-white" />
     );
   }
 
@@ -144,7 +144,7 @@ export function ResourceManagementPanel() {
             {station.available_equipment.map((item) => (
               <span
                 key={item}
-                className="rounded-md bg-neutral-100 px-2.5 py-1 text-sm font-medium text-neutral-700"
+                className="rounded-none bg-neutral-100 px-2.5 py-1 text-sm font-medium text-neutral-700"
               >
                 {item}
               </span>

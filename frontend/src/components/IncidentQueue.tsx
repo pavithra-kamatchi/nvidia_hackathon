@@ -5,7 +5,6 @@ import {
   formatTime,
 } from "../lib/format";
 import type { Incident } from "../types";
-import { ChevronRightIcon } from "./icons";
 
 export function IncidentQueue({
   incidents,
@@ -18,17 +17,13 @@ export function IncidentQueue({
 }) {
   return (
     <section className="panel flex h-full flex-col overflow-hidden">
-      <div className="flex shrink-0 items-center justify-between px-5 py-3">
-        <div>
-          <p className="eyebrow">Triage queue</p>
-          <h2 className="mt-0.5 text-base font-bold text-stone-900">
-            Incidents <span className="text-stone-400">{incidents.length}</span>
-          </h2>
-        </div>
-        <ChevronRightIcon className="h-4 w-4 text-stone-300" />
+      <div className="flex shrink-0 items-center px-5 py-3">
+        <h2 className="text-base font-bold text-stone-900">
+          Incidents Queue <span className="text-stone-400">({incidents.length})</span>
+        </h2>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      <div className="incident-queue-scroll max-h-40 min-h-0 flex-1 overflow-y-scroll">
         <table className="w-full border-collapse text-base">
           <thead>
             <tr className="sticky top-0 border-y border-stone-100 bg-stone-50/80 text-left text-[10px] font-bold uppercase tracking-[0.1em] text-stone-400">
@@ -65,7 +60,7 @@ export function IncidentQueue({
                 </td>
                 <td className="px-5 py-2">
                   <span
-                    className={`inline-flex rounded-md px-2 py-1 text-[11px] font-bold ${STATUS_PILL[incident.status]}`}
+                    className={`inline-flex rounded-none px-2 py-1 text-[11px] font-bold ${STATUS_PILL[incident.status]}`}
                   >
                     {STATUS_LABEL[incident.status]}
                   </span>

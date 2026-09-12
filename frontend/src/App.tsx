@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { fetchIncidents, fetchLogs, ingestImage } from "./api";
 import { DroneFeedPanel } from "./components/DroneFeedPanel";
-import { Footer } from "./components/Footer";
 import { Header } from "./components/Header";
 import { IncidentDetailPanel } from "./components/IncidentDetailPanel";
 import { IncidentQueue } from "./components/IncidentQueue";
@@ -76,14 +75,9 @@ function App() {
       <main className="mx-auto flex w-full max-w-[1680px] flex-1 flex-col gap-4 overflow-hidden px-5 py-4 lg:px-7">
         <div className="flex shrink-0 items-center justify-between gap-4">
           <div>
-            <p className="eyebrow">Operations / Overview</p>
-            <h1 className="mt-1 text-2xl font-semibold tracking-[-0.03em] text-stone-950 sm:text-3xl">
+            <h1 className="text-2xl font-semibold tracking-[-0.03em] text-stone-950 sm:text-3xl">
               Response command
             </h1>
-          </div>
-          <div className="hidden items-center gap-2 rounded-full border border-stone-200 bg-white/70 px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-stone-500 shadow-sm sm:flex">
-            <span className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_0_3px_rgba(16,185,129,0.12)]" />
-            All systems nominal
           </div>
         </div>
 
@@ -108,10 +102,6 @@ function App() {
           <ResourceManagementPanel />
         </div>
       </main>
-
-      <div className="mx-auto w-full max-w-[1600px] shrink-0 px-6">
-        <Footer />
-      </div>
     </div>
   );
 }

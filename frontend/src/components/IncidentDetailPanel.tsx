@@ -54,7 +54,7 @@ export function IncidentDetailPanel({
 
   if (!incident) {
     return (
-      <section className="flex h-full flex-col items-center justify-center rounded-xl border border-neutral-200 bg-white p-8 text-center text-base text-neutral-400">
+      <section className="flex h-full flex-col items-center justify-center rounded-none border border-neutral-200 bg-white p-8 text-center text-base text-neutral-400">
         Select an incident from the queue to view details.
       </section>
     );
@@ -169,7 +169,7 @@ export function IncidentDetailPanel({
         </div>
 
         {incident.reasoning && (
-          <div className="mx-5 mt-3 rounded-lg bg-neutral-50 p-3.5">
+          <div className="mx-5 mt-3 rounded-none bg-neutral-50 p-3.5">
             <div className="mb-1 text-[10px] font-extrabold uppercase tracking-[0.14em] text-stone-500">
               AI assessment
             </div>
@@ -182,7 +182,7 @@ export function IncidentDetailPanel({
 
       <div className="shrink-0 px-5 pb-5 pt-3">
         {incident.needs_human_verification && (
-          <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
+          <div className="mb-3 rounded-none border border-amber-200 bg-amber-50 p-3">
             <div className="text-xs font-bold text-amber-900">
               Human verification required
             </div>
@@ -195,7 +195,7 @@ export function IncidentDetailPanel({
                 type="button"
                 onClick={() => handleReview(true)}
                 disabled={reviewing}
-                className="rounded-md bg-amber-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-amber-700 disabled:opacity-60"
+                className="rounded-none bg-amber-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-amber-700 disabled:opacity-60"
               >
                 Approve
               </button>
@@ -203,7 +203,7 @@ export function IncidentDetailPanel({
                 type="button"
                 onClick={() => handleReview(false)}
                 disabled={reviewing}
-                className="rounded-md border border-amber-300 px-3 py-1.5 text-xs font-bold text-amber-900 hover:bg-amber-100 disabled:opacity-60"
+                className="rounded-none border border-amber-300 px-3 py-1.5 text-xs font-bold text-amber-900 hover:bg-amber-100 disabled:opacity-60"
               >
                 Reject
               </button>
@@ -220,7 +220,7 @@ export function IncidentDetailPanel({
               onChange={(e) =>
                 handleStatusChange(e.target.value as IncidentStatus)
               }
-              className="appearance-none rounded-lg border border-stone-200 bg-white py-2 pl-8 pr-9 text-sm font-semibold text-stone-800 outline-none focus:border-amber-500"
+              className="appearance-none rounded-none border border-stone-200 bg-white py-2 pl-8 pr-9 text-sm font-semibold text-stone-800 outline-none focus:border-amber-500"
             >
               {ALL_STATUSES.map((s) => (
                 <option key={s} value={s}>
@@ -239,7 +239,7 @@ export function IncidentDetailPanel({
           type="button"
           onClick={handleDispatch}
           disabled={dispatching}
-          className="flex w-full items-center justify-center gap-2 rounded-lg bg-stone-950 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-stone-800 disabled:opacity-60"
+          className="flex w-full items-center justify-center gap-2 rounded-none bg-stone-950 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-stone-800 disabled:opacity-60"
         >
           {dispatching ? "Dispatching..." : "Dispatch Response"}
           <ChevronRightIcon className="h-5 w-5" />
@@ -248,7 +248,7 @@ export function IncidentDetailPanel({
           type="button"
           onClick={handleReport}
           disabled={reporting}
-          className="mt-2 flex w-full items-center justify-center rounded-lg py-2 text-xs font-bold text-stone-500 transition hover:bg-stone-50 hover:text-stone-800 disabled:opacity-60"
+          className="mt-2 flex w-full items-center justify-center rounded-none py-2 text-xs font-bold text-stone-500 transition hover:bg-stone-50 hover:text-stone-800 disabled:opacity-60"
         >
           {reporting ? "Preparing report..." : "Download incident report"}
         </button>

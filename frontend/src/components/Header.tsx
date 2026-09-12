@@ -2,12 +2,22 @@ import { useEffect, useState } from "react";
 import { formatDate, formatTime } from "../lib/format";
 import { ActivityIcon, CpuIcon, MenuIcon, WifiIcon } from "./icons";
 
-function StatusPill({ icon, label }: { icon: React.ReactNode; label: string }) {
+function StatusPill({
+  icon,
+  label,
+  healthy = true,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  healthy?: boolean;
+}) {
   return (
     <div className="flex items-center gap-2 text-xs font-semibold text-stone-600">
       <span className="text-stone-400">{icon}</span>
       <span>{label}</span>
-      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+      <span
+        className={`h-1.5 w-1.5 rounded-full ${healthy ? "bg-emerald-500" : "bg-red-500"}`}
+      />
     </div>
   );
 }
@@ -26,7 +36,7 @@ export function Header({ live }: { live: boolean }) {
         <button
           type="button"
           aria-label="Open menu"
-          className="rounded-lg border border-stone-200 bg-white p-2 text-stone-600 shadow-sm transition hover:border-stone-300 hover:bg-stone-50"
+          className="rounded-none border border-stone-200 bg-white p-2 text-stone-600 shadow-sm transition hover:border-stone-300 hover:bg-stone-50"
         >
           <MenuIcon className="h-6 w-6" />
         </button>
@@ -37,7 +47,7 @@ export function Header({ live }: { live: boolean }) {
             alt="SCOUT"
             className="h-10 w-10 object-contain"
           />
-          <div className="leading-tight">
+          <div className="font-brand leading-tight">
             <div className="text-xl font-extrabold tracking-[-0.04em] text-stone-950">
               SCOUT<span className="text-amber-600">.</span>
             </div>
@@ -54,6 +64,7 @@ export function Header({ live }: { live: boolean }) {
           <StatusPill
             icon={<WifiIcon className="h-5 w-5" />}
             label={live ? "Live Backend" : "Offline Mode"}
+            healthy={live}
           />
           <StatusPill
             icon={<ActivityIcon className="h-5 w-5" />}
