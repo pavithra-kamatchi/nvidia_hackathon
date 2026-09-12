@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import type { ChangeEvent } from "react";
 import { apiUrl } from "../api";
 import { formatCoordinate } from "../lib/format";
@@ -17,10 +17,9 @@ export function DroneFeedPanel({
   const latestLog = logs[0];
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
-  const feedImage = useMemo(
-    () => (incident?.image_url ? apiUrl(incident.image_url) : "/live-feed.png"),
-    [incident?.image_url],
-  );
+  const feedImage = incident?.image_url
+    ? apiUrl(incident.image_url)
+    : "/live-feed.png";
 
   async function handleUpload(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -72,7 +71,7 @@ export function DroneFeedPanel({
         />
 
         <div className="absolute left-4 top-4 rounded-none border border-white/20 bg-stone-950/50 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-white/80 backdrop-blur-sm">
-          Camera 01 / Thermal + RGB
+          Uploaded drone image / RGB
         </div>
 
         <label
@@ -95,16 +94,6 @@ export function DroneFeedPanel({
         {uploadError && (
           <div className="absolute right-4 top-16 max-w-64 rounded-none border border-red-300 bg-red-50 px-3 py-2 text-xs font-semibold text-red-800 shadow-lg">
             {uploadError}
-          </div>
-        )}
-
-        {incident && incident.number_of_people > 0 && (
-          <div className="absolute left-[38%] top-[49%] -translate-x-1/2 -translate-y-1/2">
-            <div className="relative h-20 w-16 rounded-none border-2 border-red-500 shadow-[0_0_0_1px_rgba(0,0,0,0.15)]">
-              <div className="absolute -top-7 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-none bg-red-500 px-2 py-1 text-[11px] font-bold uppercase tracking-wide text-white shadow-lg">
-                Person detected
-              </div>
-            </div>
           </div>
         )}
 

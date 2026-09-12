@@ -3,11 +3,13 @@ import type { Incident, Station } from "../types";
 export const MOCK_STATION: Station = {
   station_id: "stn-001",
   name: "Station 12 — Ithaca Falls",
+  station_type: "rescue",
   location: { latitude: 42.4483, longitude: -76.4791 },
   responder_types: ["EMT", "Firefighter", "Police"],
   available_responders: { EMT: 4, Firefighter: 6, Police: 3 },
   available_vehicles: 5,
   available_equipment: ["Medical Kit", "Thermal Camera", "Extraction Gear", "Water Pump"],
+  equipment_counts: { "Medical Kit": 4, "Thermal Camera": 1, "Extraction Gear": 2, "Water Pump": 1 },
   operational_status: "available",
   current_deployments: [],
 };

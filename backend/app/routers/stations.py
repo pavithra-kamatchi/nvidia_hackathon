@@ -6,7 +6,7 @@ from pydantic import BaseModel
 
 from app.repositories.collections import station_repo
 from app.agents.monitoring import monitoring_agent
-from app.schemas.station import Station, StationCreate
+from app.schemas.station import NonNegativeInt, Station, StationCreate
 from app.utils.ids import generate_id
 
 router = APIRouter(tags=["stations"])
@@ -46,8 +46,8 @@ async def get_station(station_id: str):
 
 
 class StationUpdate(BaseModel):
-    available_responders: Optional[dict] = None
-    available_vehicles: Optional[int] = None
+    available_responders: Optional[dict[str, NonNegativeInt]] = None
+    available_vehicles: Optional[NonNegativeInt] = None
     available_equipment: Optional[List[str]] = None
     operational_status: Optional[str] = None
 
@@ -65,7 +65,7 @@ async def update_station(
     if station is None:
         raise HTTPException(status_code=404, detail="Station not found")
 
-    updates = payload.model_dump(exclude_unset=True)
+    updates = payload.model_dump(exclude_unset=True, exclude_none=True)
     previous = {field: getattr(station, field) for field in updates}
     for field, value in updates.items():
         setattr(station, field, value)

@@ -9,10 +9,13 @@ npm install
 npm run dev
 ```
 
-By default the app calls the FastAPI backend at `http://localhost:8000`. Copy
-`.env.example` to `.env` and set `VITE_API_BASE_URL` to point elsewhere. If the
-backend isn't reachable, the dashboard falls back to demo data so the UI still
-renders.
+Copy `.env.example` to `.env`. The hackathon configuration calls FastAPI at
+`http://10.50.12.164:8081`; update the IP if the GB10 address changes. Port
+`5173` serves this webpage, while port `8081` serves the backend API.
+
+The dashboard does not substitute fake incidents when the backend is
+unreachable. It shows a disconnected warning instead. `VITE_OPERATOR_ID`
+identifies review, allocation, and station-resource changes in the audit log.
 
 ## Build
 

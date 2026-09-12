@@ -1,22 +1,20 @@
 import { useState } from "react";
 import {
-  ALL_STATUSES,
-  dispatchIncident,
+  decideAllocation,
   fetchIncidentReport,
   resolveIncident,
   reviewIncident,
+  simulateNotification,
 } from "../api";
 import {
-  STATUS_DOT,
   STATUS_LABEL,
   URGENCY_LABEL,
   URGENCY_TEXT,
   formatCoordinate,
 } from "../lib/format";
-import type { Incident, IncidentStatus } from "../types";
+import type { Incident } from "../types";
 import {
   AlertTriangleIcon,
-  ChevronDownIcon,
   ChevronRightIcon,
   FlameIcon,
   MapPinIcon,
@@ -44,13 +42,16 @@ function InfoRow({
 export function IncidentDetailPanel({
   incident,
   onIncidentUpdate,
+  onError,
 }: {
   incident: Incident | undefined;
   onIncidentUpdate: (incident: Incident) => void;
+  onError: (message: string | undefined) => void;
 }) {
-  const [dispatching, setDispatching] = useState(false);
+  const [notifying, setNotifying] = useState(false);
   const [reviewing, setReviewing] = useState(false);
   const [reporting, setReporting] = useState(false);
+  const [notice, setNotice] = useState<string>();
 
   if (!incident) {
     return (
@@ -60,47 +61,80 @@ export function IncidentDetailPanel({
     );
   }
 
-  async function handleStatusChange(status: IncidentStatus) {
+  async function handleAllocationDecision(approved: boolean) {
     if (!incident) return;
-    if (status === "resolved") {
-      const updated = await resolveIncident(incident.incident_id);
-      onIncidentUpdate(updated ?? { ...incident, status });
+    if (!incident.assignment) {
+      onError("No allocation proposal is available for this incident.");
       return;
     }
-    onIncidentUpdate({ ...incident, status });
-  }
-
-  async function handleDispatch() {
-    if (!incident) return;
-    setDispatching(true);
-    const updated = await dispatchIncident(
-      incident.incident_id,
-      incident.assignment?.assigned_station_ids ?? [],
-    );
-    setDispatching(false);
-    onIncidentUpdate(updated ?? { ...incident, status: "dispatched" });
+    setReviewing(true);
+    try {
+      const assignment = await decideAllocation(
+        incident.assignment.assignment_id,
+        approved,
+      );
+      onIncidentUpdate({ ...incident, assignment });
+      onError(undefined);
+    } catch (actionError) {
+      onError(actionError instanceof Error ? actionError.message : "Allocation decision failed");
+    } finally {
+      setReviewing(false);
+    }
   }
 
   async function handleReview(approved: boolean) {
     if (!incident) return;
     setReviewing(true);
-    const updated = await reviewIncident(incident.incident_id, approved);
-    setReviewing(false);
-    onIncidentUpdate(
-      updated ?? {
-        ...incident,
-        status: approved ? "notified" : "false_positive",
-        needs_human_verification: false,
-      },
-    );
+    try {
+      const updated = await reviewIncident(incident.incident_id, approved);
+      onIncidentUpdate({ ...incident, ...updated, assignment: incident.assignment });
+      onError(undefined);
+    } catch (actionError) {
+      onError(actionError instanceof Error ? actionError.message : "Incident review failed");
+    } finally {
+      setReviewing(false);
+    }
+  }
+
+  async function handleNotification() {
+    if (!incident?.assignment) return;
+    setNotifying(true);
+    try {
+      const result = await simulateNotification(incident.assignment.assignment_id);
+      onIncidentUpdate({ ...incident, ...result.incident, assignment: incident.assignment });
+      setNotice(result.message);
+      onError(undefined);
+    } catch (actionError) {
+      onError(actionError instanceof Error ? actionError.message : "Notification simulation failed");
+    } finally {
+      setNotifying(false);
+    }
+  }
+
+  async function handleResolve() {
+    if (!incident) return;
+    try {
+      const updated = await resolveIncident(incident.incident_id);
+      onIncidentUpdate({ ...incident, ...updated, assignment: incident.assignment });
+      onError(undefined);
+    } catch (actionError) {
+      onError(actionError instanceof Error ? actionError.message : "Could not resolve incident");
+    }
   }
 
   async function handleReport() {
     if (!incident) return;
     setReporting(true);
-    const report = await fetchIncidentReport(incident.incident_id);
+    let report;
+    try {
+      report = await fetchIncidentReport(incident.incident_id);
+      onError(undefined);
+    } catch (reportError) {
+      onError(reportError instanceof Error ? reportError.message : "Could not prepare report");
+      setReporting(false);
+      return;
+    }
     setReporting(false);
-    if (!report) return;
     const blob = new Blob([JSON.stringify(report, null, 2)], {
       type: "application/json",
     });
@@ -187,8 +221,7 @@ export function IncidentDetailPanel({
               Human verification required
             </div>
             <p className="mt-1 text-xs leading-relaxed text-amber-800">
-              Agent triage is waiting for an operator decision before
-              notification.
+              Verify the observation before reviewing the resource allocation.
             </p>
             <div className="mt-2 flex gap-2">
               <button
@@ -197,7 +230,7 @@ export function IncidentDetailPanel({
                 disabled={reviewing}
                 className="rounded-none bg-amber-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-amber-700 disabled:opacity-60"
               >
-                Approve
+                Verify observation
               </button>
               <button
                 type="button"
@@ -205,45 +238,83 @@ export function IncidentDetailPanel({
                 disabled={reviewing}
                 className="rounded-none border border-amber-300 px-3 py-1.5 text-xs font-bold text-amber-900 hover:bg-amber-100 disabled:opacity-60"
               >
-                Reject
+                Mark false positive
               </button>
             </div>
           </div>
         )}
+        {incident.assignment && (
+          <div className="mb-3 border border-stone-200 bg-stone-50 p-3 text-xs text-stone-700">
+            <div className="font-bold uppercase tracking-[0.1em] text-stone-500">
+              Proposed allocation
+            </div>
+            <div className="mt-2">
+              Stations: {incident.assignment.assigned_station_ids.join(", ") || "No available station"}
+            </div>
+            <div className="mt-1">{incident.assignment.rationale}</div>
+            <div className="mt-1 font-semibold">
+              Decision: {incident.assignment.decision ?? "awaiting operator"}
+            </div>
+            {!incident.needs_human_verification && !incident.assignment.decision && (
+              <div className="mt-3 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleAllocationDecision(true)}
+                  disabled={reviewing}
+                  className="bg-stone-950 px-3 py-1.5 font-bold text-white disabled:opacity-60"
+                >
+                  Approve allocation
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleAllocationDecision(false)}
+                  disabled={reviewing}
+                  className="border border-stone-300 px-3 py-1.5 font-bold disabled:opacity-60"
+                >
+                  Reject allocation
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {notice && (
+          <div className="mb-3 border border-emerald-300 bg-emerald-50 p-2 text-xs font-semibold text-emerald-900">
+            {notice}
+          </div>
+        )}
+
         <div className="flex items-center justify-between pb-3">
           <span className="text-xs font-bold uppercase tracking-[0.1em] text-stone-500">
             Status
           </span>
-          <div className="relative">
-            <select
-              value={incident.status}
-              onChange={(e) =>
-                handleStatusChange(e.target.value as IncidentStatus)
-              }
-              className="appearance-none rounded-none border border-stone-200 bg-white py-2 pl-8 pr-9 text-sm font-semibold text-stone-800 outline-none focus:border-amber-500"
-            >
-              {ALL_STATUSES.map((s) => (
-                <option key={s} value={s}>
-                  {STATUS_LABEL[s]}
-                </option>
-              ))}
-            </select>
-            <span
-              className={`pointer-events-none absolute left-3 top-1/2 h-2.5 w-2.5 -translate-y-1/2 rounded-full ${STATUS_DOT[incident.status]}`}
-            />
-            <ChevronDownIcon className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
-          </div>
+          <span className="border border-stone-200 bg-white px-3 py-2 text-sm font-semibold text-stone-800">
+            {STATUS_LABEL[incident.status]}
+          </span>
         </div>
 
-        <button
-          type="button"
-          onClick={handleDispatch}
-          disabled={dispatching}
-          className="flex w-full items-center justify-center gap-2 rounded-none bg-stone-950 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-stone-800 disabled:opacity-60"
-        >
-          {dispatching ? "Dispatching..." : "Dispatch Response"}
-          <ChevronRightIcon className="h-5 w-5" />
-        </button>
+        {incident.assignment?.decision === "approved" && incident.status !== "notified" && (
+          <button
+            type="button"
+            onClick={handleNotification}
+            disabled={notifying}
+            className="flex w-full items-center justify-center gap-2 bg-stone-950 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-stone-800 disabled:opacity-60"
+          >
+            {notifying ? "Simulating..." : "Simulate station notification"}
+            <ChevronRightIcon className="h-5 w-5" />
+          </button>
+        )}
+        {(["notified", "dispatched", "in_progress"] as const).includes(
+          incident.status as "notified" | "dispatched" | "in_progress",
+        ) && (
+          <button
+            type="button"
+            onClick={handleResolve}
+            className="mt-2 flex w-full items-center justify-center border border-stone-300 py-2 text-xs font-bold text-stone-700"
+          >
+            Mark incident resolved
+          </button>
+        )}
         <button
           type="button"
           onClick={handleReport}

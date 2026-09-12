@@ -23,10 +23,10 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
-uvicorn app.main:app --host 0.0.0.0 --port 8080
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8081
 ```
 
-The API documentation is then available at `http://GB10-IP:8080/docs`. Keep
+The API documentation is then available at `http://GB10-IP:8081/docs`. Keep
 MongoDB and Nemotron bound to `127.0.0.1`; only expose the backend API to the
 team network.
 
@@ -78,13 +78,30 @@ changes are attributable in the audit log.
 
 ```bash
 PYTHONPATH=backend python3 -m unittest discover -s backend/tests -v
-curl -s http://127.0.0.1:8080/health
+curl -s http://127.0.0.1:8081/health
+curl -s http://127.0.0.1:8081/readiness
 curl -s http://127.0.0.1:8000/v1/models
 docker exec emergency-mongodb mongosh --quiet --eval 'db.runCommand({ping:1})'
 ```
 
 Before the demo, disconnect external internet and repeat the health and handoff
 tests to prove the runtime is fully local.
+
+## Frontend
+
+Create `frontend/.env` from the example. Port `5173` serves the webpage; port
+`8081` is the FastAPI backend that the webpage calls.
+
+```bash
+cd frontend
+cp .env.example .env
+npm ci
+npm run dev -- --host 0.0.0.0
+```
+
+The dashboard never substitutes fake incidents when the backend is offline.
+Human observation review, allocation approval, and simulated notification are
+separate actions, and operator actions are recorded as `VITE_OPERATOR_ID`.
 
 Pitch deck:
 https://docs.google.com/presentation/d/1oh6wpRUXGpdKC5UVbTl_9v0xvNj2zqti9dBFHKbfw5w/edit

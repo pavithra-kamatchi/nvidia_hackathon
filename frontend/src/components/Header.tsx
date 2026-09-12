@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { formatDate, formatTime } from "../lib/format";
 import { ActivityIcon, CpuIcon, MenuIcon, WifiIcon } from "./icons";
+import type { Readiness } from "../types";
 
 function StatusPill({
   icon,
@@ -22,7 +23,13 @@ function StatusPill({
   );
 }
 
-export function Header({ live }: { live: boolean }) {
+export function Header({
+  live,
+  readiness,
+}: {
+  live: boolean;
+  readiness?: Readiness;
+}) {
   const [now, setNow] = useState(() => new Date());
 
   useEffect(() => {
@@ -60,7 +67,11 @@ export function Header({ live }: { live: boolean }) {
 
       <div className="flex items-center gap-4 sm:gap-6">
         <div className="hidden items-center gap-5 sm:flex">
-          <StatusPill icon={<CpuIcon className="h-5 w-5" />} label="Local AI" />
+          <StatusPill
+            icon={<CpuIcon className="h-5 w-5" />}
+            label={readiness?.services.nemotron ? "Local AI ready" : "Local AI unavailable"}
+            healthy={readiness?.services.nemotron ?? false}
+          />
           <StatusPill
             icon={<WifiIcon className="h-5 w-5" />}
             label={live ? "Live Backend" : "Offline Mode"}
@@ -68,7 +79,8 @@ export function Header({ live }: { live: boolean }) {
           />
           <StatusPill
             icon={<ActivityIcon className="h-5 w-5" />}
-            label="Active"
+            label={readiness?.services.mongodb ? "MongoDB ready" : "MongoDB unavailable"}
+            healthy={readiness?.services.mongodb ?? false}
           />
         </div>
 

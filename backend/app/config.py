@@ -17,6 +17,15 @@ class Settings:
     multi_station_people_threshold: int = int(os.getenv("MULTI_STATION_PEOPLE_THRESHOLD", "4"))
 
     media_root: str = os.getenv("MEDIA_ROOT", "media")
+    max_upload_bytes: int = int(os.getenv("MAX_UPLOAD_BYTES", str(15 * 1024 * 1024)))
+    cors_origins: list[str] = [
+        origin.strip()
+        for origin in os.getenv(
+            "CORS_ORIGINS",
+            "http://localhost:5173,http://127.0.0.1:5173,http://10.50.12.164:5173",
+        ).split(",")
+        if origin.strip()
+    ]
 
     nemotron_url: str = os.getenv(
         "NEMOTRON_URL", "http://127.0.0.1:8000/v1/chat/completions"
