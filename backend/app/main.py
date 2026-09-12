@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from app.db import ensure_indexes
+from app.db import close_database, ensure_indexes
 from app.routers import assignments, handoff, images, incidents, ingest, logs, stations
 
 app = FastAPI(title="Drone-Based Emergency Coordination System")
@@ -17,6 +17,11 @@ app.include_router(handoff.router)
 @app.on_event("startup")
 async def on_startup():
     await ensure_indexes()
+
+
+@app.on_event("shutdown")
+async def on_shutdown():
+    close_database()
 
 
 @app.get("/health")

@@ -1,7 +1,8 @@
 from typing import Any, Dict, Generic, List, Optional, Type, TypeVar
 
-from motor.motor_asyncio import AsyncIOMotorCollection
 from pydantic import BaseModel
+
+from app.db import get_database
 
 ModelT = TypeVar("ModelT", bound=BaseModel)
 
@@ -11,10 +12,14 @@ class MongoRepository(Generic[ModelT]):
     collection, keyed by the model's own `<x>_id` field rather than Mongo's
     `_id`, so reads/writes never need translation."""
 
-    def __init__(self, collection: AsyncIOMotorCollection, model: Type[ModelT], id_field: str):
-        self._collection = collection
+    def __init__(self, collection_name: str, model: Type[ModelT], id_field: str):
+        self._collection_name = collection_name
         self._model = model
         self._id_field = id_field
+
+    @property
+    def _collection(self):
+        return get_database()[self._collection_name]
 
     async def insert(self, item: ModelT) -> ModelT:
         doc = item.model_dump(mode="json")
