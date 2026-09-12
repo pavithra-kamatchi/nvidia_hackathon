@@ -84,6 +84,33 @@ class LocalModelAdapterTests(unittest.TestCase):
         self.assertEqual(result.urgency, Urgency.high)
         self.assertTrue(result.needs_human_verification)
 
+    def test_reasoner_corrects_low_urgency_when_hazard_is_visible(self):
+        content = json.dumps(
+            {
+                "urgency": "low",
+                "incident_type": "person_detected",
+                "reasoning": "A person is visible.",
+                "confidence": 0.91,
+                "needs_human_verification": False,
+            }
+        )
+        detection = Detection(
+            detection_id="det-hazard-conflict",
+            timestamp=datetime.now(timezone.utc),
+            location=Coordinate(latitude=40.0, longitude=-74.0),
+            human=True,
+            blood=False,
+            number_of_people=1,
+            visible_hazards="smoke and fire",
+            observations="One person is visible near smoke and fire.",
+            confidence=0.9,
+        )
+        with patch("urllib.request.urlopen", return_value=_response(content)):
+            result = LocalNemotronReasoner().assess(detection, self.poses)
+        self.assertEqual(result.urgency, Urgency.medium)
+        self.assertEqual(result.incident_type, "person_near_hazard")
+        self.assertTrue(result.needs_human_verification)
+
     def test_reasoner_uses_deterministic_fallback(self):
         detection = Detection(
             detection_id="det-fallback",

@@ -1,7 +1,26 @@
-import { MOCK_INCIDENTS, MOCK_STATION } from "./data/mock";
-import type { Incident, IncidentStatus, IngestResponse, LogEntry, Station } from "./types";
+import type {
+  Assignment,
+  Incident,
+  IncidentReport,
+  IngestResponse,
+  LogEntry,
+  Readiness,
+  Station,
+} from "./types";
 
-export const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
+export const API_BASE =
+  import.meta.env.VITE_API_BASE_URL ?? "http://10.50.12.164:8081";
+export const OPERATOR_ID =
+  import.meta.env.VITE_OPERATOR_ID ?? "demo-controller";
+
+export class ApiError extends Error {
+  readonly status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.status = status;
+  }
+}
 
 export function apiUrl(path: string): string {
   if (/^https?:\/\//i.test(path)) return path;
@@ -9,32 +28,55 @@ export function apiUrl(path: string): string {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    headers: init?.body instanceof FormData ? undefined : { "Content-Type": "application/json" },
-    ...init,
-  });
-  if (!res.ok) throw new Error(`${init?.method ?? "GET"} ${path} failed: ${res.status}`);
-  return res.json();
-}
-
-export async function fetchIncidents(): Promise<{ incidents: Incident[]; live: boolean }> {
-  try {
-    const incidents = await request<Incident[]>("/incidents");
-    return { incidents, live: true };
-  } catch {
-    return { incidents: MOCK_INCIDENTS, live: false };
+  const headers = new Headers(init?.headers);
+  if (!(init?.body instanceof FormData)) {
+    headers.set("Content-Type", "application/json");
   }
-}
-
-export async function dispatchIncident(incidentId: string, stationIds: string[] = []): Promise<Incident | null> {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 180_000);
   try {
-    return await request<Incident>(`/incidents/${incidentId}/dispatch`, {
-      method: "POST",
-      body: JSON.stringify({ station_ids: stationIds }),
+    const response = await fetch(apiUrl(path), {
+      ...init,
+      headers,
+      signal: init?.signal ?? controller.signal,
     });
-  } catch {
-    return null;
+    if (!response.ok) {
+      let detail = `${init?.method ?? "GET"} ${path} failed`;
+      try {
+        const payload = (await response.json()) as { detail?: string };
+        if (payload.detail) detail = payload.detail;
+      } catch {
+        // Keep the request-level message when the server has no JSON body.
+      }
+      throw new ApiError(detail, response.status);
+    }
+    return (await response.json()) as T;
+  } finally {
+    window.clearTimeout(timeout);
   }
+}
+
+export async function fetchReadiness(): Promise<Readiness> {
+  return request<Readiness>("/readiness");
+}
+
+export async function fetchIncidents(): Promise<Incident[]> {
+  return request<Incident[]>("/incidents");
+}
+
+export async function fetchIncidentDetail(
+  incidentId: string,
+): Promise<Incident> {
+  const report = await request<IncidentReport>(`/incidents/${incidentId}/report`);
+  const detection = report.detections[0];
+  const assessment = report.assessments[0];
+  const assignment = report.assignments[0];
+  return {
+    ...report.incident,
+    visible_hazards: detection?.visible_hazards,
+    reasoning: assessment?.observation_and_reasoning,
+    assignment,
+  };
 }
 
 export async function reviewIncident(
@@ -42,18 +84,40 @@ export async function reviewIncident(
   approved: boolean,
   overrideUrgency?: Incident["urgency"],
   notes?: string,
-): Promise<Incident | null> {
-  try {
-    return await request<Incident>(`/incidents/${incidentId}/review`, {
-      method: "POST",
-      body: JSON.stringify({ approved, override_urgency: overrideUrgency, notes }),
-    });
-  } catch {
-    return null;
-  }
+): Promise<Incident> {
+  return request<Incident>(`/incidents/${incidentId}/review`, {
+    method: "POST",
+    body: JSON.stringify({
+      approved,
+      operator_id: OPERATOR_ID,
+      override_urgency: overrideUrgency,
+      notes,
+    }),
+  });
 }
 
-export async function ingestImage(file: File, latitude: number, longitude: number): Promise<IngestResponse> {
+export async function decideAllocation(
+  assignmentId: string,
+  approved: boolean,
+  notes?: string,
+): Promise<Assignment> {
+  return request<Assignment>(`/allocations/${assignmentId}/decision`, {
+    method: "POST",
+    body: JSON.stringify({ approved, operator_id: OPERATOR_ID, notes }),
+  });
+}
+
+export async function simulateNotification(
+  assignmentId: string,
+): Promise<{ status: "simulated"; message: string; incident: Incident }> {
+  return request(`/allocations/${assignmentId}/notify`, { method: "POST" });
+}
+
+export async function ingestImage(
+  file: File,
+  latitude: number,
+  longitude: number,
+): Promise<IngestResponse> {
   const body = new FormData();
   body.append("file", file);
   body.append("latitude", String(latitude));
@@ -62,51 +126,44 @@ export async function ingestImage(file: File, latitude: number, longitude: numbe
 }
 
 export async function fetchLogs(incidentId?: string): Promise<LogEntry[]> {
-  try {
-    return await request<LogEntry[]>(incidentId ? `/logs?incident_id=${encodeURIComponent(incidentId)}` : "/logs");
-  } catch {
-    return [];
-  }
+  return request<LogEntry[]>(
+    incidentId ? `/logs?incident_id=${encodeURIComponent(incidentId)}` : "/logs",
+  );
 }
 
-export async function fetchIncidentReport(incidentId: string): Promise<Record<string, unknown> | null> {
-  try {
-    return await request<Record<string, unknown>>(`/incidents/${incidentId}/report`);
-  } catch {
-    return null;
-  }
+export async function fetchIncidentReport(
+  incidentId: string,
+): Promise<IncidentReport> {
+  return request<IncidentReport>(`/incidents/${incidentId}/report`);
 }
 
-export async function resolveIncident(incidentId: string): Promise<Incident | null> {
-  try {
-    return await request<Incident>(`/incidents/${incidentId}/resolve`, { method: "POST" });
-  } catch {
-    return null;
-  }
+export async function resolveIncident(incidentId: string): Promise<Incident> {
+  return request<Incident>(`/incidents/${incidentId}/resolve`, {
+    method: "POST",
+  });
 }
 
-export async function fetchStation(): Promise<{ station: Station; live: boolean }> {
-  try {
-    const stations = await request<Station[]>("/stations");
-    if (stations.length === 0) throw new Error("no stations");
-    return { station: stations[0], live: true };
-  } catch {
-    return { station: MOCK_STATION, live: false };
-  }
+export async function fetchStations(): Promise<Station[]> {
+  return request<Station[]>("/stations");
 }
 
 export async function updateStation(
   stationId: string,
-  patch: Partial<Pick<Station, "available_responders" | "available_vehicles" | "available_equipment">>,
-): Promise<Station | null> {
-  try {
-    return await request<Station>(`/stations/${stationId}`, {
-      method: "PATCH",
-      body: JSON.stringify(patch),
-    });
-  } catch {
-    return null;
-  }
+  patch: Partial<
+    Pick<
+      Station,
+      | "available_responders"
+      | "available_vehicles"
+      | "available_equipment"
+      | "operational_status"
+    >
+  >,
+): Promise<Station> {
+  return request<Station>(`/stations/${stationId}`, {
+    method: "PATCH",
+    headers: { "X-Operator-ID": OPERATOR_ID },
+    body: JSON.stringify(patch),
+  });
 }
 
 export const ALL_STATUSES: IncidentStatus[] = [

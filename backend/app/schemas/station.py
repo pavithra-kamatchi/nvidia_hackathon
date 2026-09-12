@@ -1,8 +1,10 @@
-from typing import Dict, List
+from typing import Annotated, Dict, List
 
 from pydantic import BaseModel, Field
 
 from app.schemas.common import Coordinate
+
+NonNegativeInt = Annotated[int, Field(ge=0)]
 
 
 class StationCreate(BaseModel):
@@ -10,10 +12,10 @@ class StationCreate(BaseModel):
     station_type: str = "other"
     location: Coordinate
     responder_types: List[str]
-    available_responders: Dict[str, int]
-    available_vehicles: int
+    available_responders: Dict[str, NonNegativeInt]
+    available_vehicles: NonNegativeInt
     available_equipment: List[str]
-    equipment_counts: Dict[str, int] = Field(default_factory=dict)
+    equipment_counts: Dict[str, NonNegativeInt] = Field(default_factory=dict)
 
 
 class Station(StationCreate):

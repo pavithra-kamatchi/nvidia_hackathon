@@ -44,7 +44,7 @@ class SafetyContractTests(unittest.IsolatedAsyncioTestCase):
             operational_status="offline",
             current_deployments=[],
         )
-        self.assertFalse(CoordinatorAgent._can_help(station, ["fire"], ["fire"]))
+        self.assertFalse(CoordinatorAgent._can_help(station, ["fire"], "inc-test", {}))
 
     def test_handoff_rejects_mismatched_locations(self):
         with self.assertRaises(ValidationError):

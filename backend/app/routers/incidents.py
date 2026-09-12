@@ -60,6 +60,9 @@ async def review_incident(incident_id: str, payload: ReviewRequest):
     else:
         if payload.override_urgency is not None:
             incident.urgency = payload.override_urgency
+        # Verifying the observation does not approve or notify the proposed
+        # allocation. Those are separate, explicit human-controlled actions.
+        incident.status = IncidentStatus.awaiting_approval
         incident.needs_human_verification = False
         incident.last_updated = datetime.now(timezone.utc)
         await incident_repo.replace(incident)

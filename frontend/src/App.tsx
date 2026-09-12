@@ -1,11 +1,17 @@
 import { useEffect, useState } from "react";
-import { fetchIncidents, fetchLogs, ingestImage } from "./api";
+import {
+  fetchIncidentDetail,
+  fetchIncidents,
+  fetchLogs,
+  fetchReadiness,
+  ingestImage,
+} from "./api";
 import { DroneFeedPanel } from "./components/DroneFeedPanel";
 import { Header } from "./components/Header";
 import { IncidentDetailPanel } from "./components/IncidentDetailPanel";
 import { IncidentQueue } from "./components/IncidentQueue";
 import { ResourceManagementPanel } from "./components/ResourceManagementPanel";
-import type { Incident, LogEntry } from "./types";
+import type { Incident, LogEntry, Readiness } from "./types";
 
 const URGENCY_RANK: Record<Incident["urgency"], number> = {
   high: 0,
@@ -23,6 +29,8 @@ function highestPriority(incidents: Incident[]): Incident | undefined {
 function App() {
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [live, setLive] = useState(false);
+  const [readiness, setReadiness] = useState<Readiness>();
+  const [error, setError] = useState<string>();
   const [selectedId, setSelectedId] = useState<string>();
   const [logs, setLogs] = useState<LogEntry[]>([]);
 
@@ -30,12 +38,36 @@ function App() {
     let cancelled = false;
 
     async function load() {
-      const { incidents: data, live: isLive } = await fetchIncidents();
-      if (cancelled) return;
-      setIncidents(data);
-      setLive(isLive);
-      setSelectedId((current) => current ?? highestPriority(data)?.incident_id);
-      setLogs(await fetchLogs());
+      try {
+        const [data, currentReadiness, currentLogs] = await Promise.all([
+          fetchIncidents(),
+          fetchReadiness(),
+          fetchLogs(),
+        ]);
+        if (cancelled) return;
+        setIncidents((current) =>
+          data.map((item) => {
+            const existing = current.find(
+              (candidate) => candidate.incident_id === item.incident_id,
+            );
+            return {
+              ...item,
+              visible_hazards: existing?.visible_hazards,
+              reasoning: existing?.reasoning,
+              assignment: existing?.assignment,
+            };
+          }),
+        );
+        setLive(true);
+        setReadiness(currentReadiness);
+        setError(undefined);
+        setSelectedId((current) => current ?? highestPriority(data)?.incident_id);
+        setLogs(currentLogs);
+      } catch (loadError) {
+        if (cancelled) return;
+        setLive(false);
+        setError(loadError instanceof Error ? loadError.message : "Backend unavailable");
+      }
     }
 
     load();
@@ -45,6 +77,23 @@ function App() {
       clearInterval(id);
     };
   }, []);
+
+  useEffect(() => {
+    if (!selectedId || !live) return;
+    let cancelled = false;
+    fetchIncidentDetail(selectedId)
+      .then((detail) => {
+        if (!cancelled) handleIncidentUpdate(detail);
+      })
+      .catch((detailError: unknown) => {
+        if (!cancelled) {
+          setError(detailError instanceof Error ? detailError.message : "Could not load incident details");
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedId, live]);
 
   const selected = incidents.find((i) => i.incident_id === selectedId);
 
@@ -58,6 +107,8 @@ function App() {
     const result = await ingestImage(file, latitude, longitude);
     const incident = {
       ...result.incident,
+      visible_hazards: result.detection.visible_hazards,
+      reasoning: result.assessment.observation_and_reasoning,
       assignment: result.assignment ?? undefined,
     };
     setIncidents((prev) => [
@@ -66,11 +117,22 @@ function App() {
     ]);
     setSelectedId(incident.incident_id);
     setLogs(await fetchLogs());
+    setError(undefined);
   }
 
   return (
     <div className="app-shell flex h-screen flex-col overflow-hidden">
-      <Header live={live} />
+      <Header live={live} readiness={readiness} />
+
+      {error && (
+        <div
+          role="alert"
+          className="border-b border-red-300 bg-red-50 px-5 py-2 text-sm font-semibold text-red-900"
+        >
+          {live ? "Action failed." : "Backend disconnected. No demonstration data is being substituted."}{" "}
+          {error}
+        </div>
+      )}
 
       <main className="mx-auto flex w-full max-w-[1680px] flex-1 flex-col gap-4 overflow-hidden px-5 py-4 lg:px-7">
         <div className="flex shrink-0 items-center justify-between gap-4">
@@ -90,6 +152,7 @@ function App() {
           <IncidentDetailPanel
             incident={selected}
             onIncidentUpdate={handleIncidentUpdate}
+            onError={setError}
           />
         </div>
 
@@ -99,7 +162,7 @@ function App() {
             selectedId={selectedId}
             onSelect={setSelectedId}
           />
-          <ResourceManagementPanel />
+          <ResourceManagementPanel onError={setError} />
         </div>
       </main>
     </div>

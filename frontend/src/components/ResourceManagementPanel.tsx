@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { fetchStation, updateStation } from "../api";
+import { fetchStations, updateStation } from "../api";
 import type { Station } from "../types";
 import { MinusIcon, PlusIcon, TruckIcon, UsersIcon, WrenchIcon } from "./icons";
 
@@ -56,47 +56,62 @@ function Counter({
   );
 }
 
-export function ResourceManagementPanel() {
+export function ResourceManagementPanel({
+  onError,
+}: {
+  onError: (message: string | undefined) => void;
+}) {
   const [station, setStation] = useState<Station>();
 
   useEffect(() => {
-    fetchStation().then(({ station }) => setStation(station));
-  }, []);
+    fetchStations()
+      .then((stations) => {
+        setStation(stations[0]);
+        if (stations.length === 0) onError("No stations are registered in MongoDB.");
+      })
+      .catch((error: unknown) => {
+        onError(error instanceof Error ? error.message : "Could not load stations");
+      });
+  }, [onError]);
 
   if (!station) {
     return (
-      <section className="h-full rounded-none border border-neutral-200 bg-white" />
+      <section className="flex h-full items-center justify-center border border-neutral-200 bg-white p-4 text-sm text-stone-500">
+        No live station data available.
+      </section>
     );
   }
 
-  function persist(
+  async function persist(
     patch: Partial<
       Pick<Station, "available_responders" | "available_vehicles">
     >,
   ) {
     if (!station) return;
-    updateStation(station.station_id, patch);
+    try {
+      const updated = await updateStation(station.station_id, patch);
+      setStation(updated);
+      onError(undefined);
+    } catch (error) {
+      onError(error instanceof Error ? error.message : "Station update failed");
+    }
   }
 
   function adjustResponder(type: string, delta: number) {
-    setStation((prev) => {
-      if (!prev) return prev;
-      const next = Math.max(0, (prev.available_responders[type] ?? 0) + delta);
-      const available_responders = {
-        ...prev.available_responders,
+    if (!station) return;
+    const next = Math.max(0, (station.available_responders[type] ?? 0) + delta);
+    void persist({
+      available_responders: {
+        ...station.available_responders,
         [type]: next,
-      };
-      persist({ available_responders });
-      return { ...prev, available_responders };
+      },
     });
   }
 
   function adjustVehicles(delta: number) {
-    setStation((prev) => {
-      if (!prev) return prev;
-      const available_vehicles = Math.max(0, prev.available_vehicles + delta);
-      persist({ available_vehicles });
-      return { ...prev, available_vehicles };
+    if (!station) return;
+    void persist({
+      available_vehicles: Math.max(0, station.available_vehicles + delta),
     });
   }
 

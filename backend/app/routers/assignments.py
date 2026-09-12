@@ -77,6 +77,12 @@ async def simulate_notification(assignment_id: str):
         raise HTTPException(status_code=404, detail="Allocation proposal not found")
     if assignment.decision != "approved":
         raise HTTPException(status_code=409, detail="Human approval is required before notification")
+    if assignment.status == "notified":
+        raise HTTPException(status_code=409, detail="Notification was already simulated")
+
+    incident = await incident_repo.get(assignment.incident_id)
+    if incident is None:
+        raise HTTPException(status_code=404, detail="Incident not found")
 
     await monitoring_agent.log(
         "simulated_notification",
@@ -89,9 +95,15 @@ async def simulate_notification(assignment_id: str):
         actor_type="system",
         actor_id="notification-simulator",
     )
+    incident.status = IncidentStatus.notified
+    incident.last_updated = datetime.now(timezone.utc)
+    await incident_repo.replace(incident)
+    assignment.status = "notified"
+    await assignment_repo.replace(assignment)
     return {
         "status": "simulated",
         "assignment_id": assignment_id,
+        "incident": incident,
         "message": "No real station notification or 911 call was made.",
     }
 

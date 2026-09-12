@@ -1,0 +1,184 @@
+{
+  "incident": {
+    "incident_id": "inc_20260912T191952178505_3b1578",
+    "location": {
+      "latitude": 42.4471,
+      "longitude": -76.4804
+    },
+    "incident_type": "person_near_hazard",
+    "urgency": "medium",
+    "status": "notified",
+    "number_of_people": 1,
+    "first_uploaded": "2026-09-12T18:30:00Z",
+    "last_updated": "2026-09-12T19:22:48.751577Z",
+    "needs_human_verification": false,
+    "image_url": null
+  },
+  "detections": [
+    {
+      "detection_id": "demo-detection-001",
+      "timestamp": "2026-09-12T18:30:00Z",
+      "location": {
+        "latitude": 42.4471,
+        "longitude": -76.4804
+      },
+      "human": true,
+      "blood": false,
+      "number_of_people": 1,
+      "visible_hazards": "smoke nearby",
+      "observations": "One person is visible near smoke.",
+      "confidence": 0.86,
+      "image_url": null
+    }
+  ],
+  "assessments": [
+    {
+      "assessment_id": "asmt_20260912T191952178505_545c3e",
+      "incident_id": "inc_20260912T191952178505_3b1578",
+      "detection_id": "demo-detection-001",
+      "timestamp": "2026-09-12T19:19:52.178505Z",
+      "urgency": "medium",
+      "incident_type": "person_near_hazard",
+      "observation_and_reasoning": "A person is close to visible smoke. The visible hazard requires timely human review.",
+      "confidence": 0.81,
+      "needs_human_verification": true
+    }
+  ],
+  "assignments": [
+    {
+      "assignment_id": "asg_20260912T191952184952_481b7e",
+      "incident_id": "inc_20260912T191952178505_3b1578",
+      "assigned_station_ids": [
+        "stn_20260912T191833453491_d07271"
+      ],
+      "recommended_resources": {
+        "EMS": 1
+      },
+      "priority": 2,
+      "rationale": "Selected Ithaca Demo Fire and EMS based on nearest available station(s) with responder types ['EMS'] for incident_type='person_near_hazard' (urgency=medium).",
+      "escalate_to_911": false,
+      "requires_multi_station": false,
+      "requires_additional_support": false,
+      "needs_human_approval": true,
+      "status": "notified",
+      "accepted_station_ids": [],
+      "rejected_station_ids": [],
+      "created_at": "2026-09-12T19:19:52.184952Z",
+      "decision": "approved",
+      "decided_by": "demo-controller",
+      "decided_at": "2026-09-12T19:21:37.544362Z"
+    }
+  ],
+  "timeline": [
+    {
+      "log_id": "log_20260912T191952181078_f6bd73",
+      "timestamp": "2026-09-12T19:19:52.181078Z",
+      "incident_id": "inc_20260912T191952178505_3b1578",
+      "actor_type": "agent",
+      "actor_id": "perception-triage-handoff",
+      "event_type": "agent_handoff",
+      "summary": "Validated Perception/Triage handoff for incident inc_20260912T191952178505_3b1578.",
+      "payload": {
+        "detection_id": "demo-detection-001",
+        "warnings": []
+      }
+    },
+    {
+      "log_id": "log_20260912T191952187487_ba4c4a",
+      "timestamp": "2026-09-12T19:19:52.187487Z",
+      "incident_id": "inc_20260912T191952178505_3b1578",
+      "actor_type": "system",
+      "actor_id": null,
+      "event_type": "dashboard_alert",
+      "summary": "Incident inc_20260912T191952178505_3b1578 (medium/person_near_hazard) posted to dashboard.",
+      "payload": {
+        "assignment_id": "asg_20260912T191952184952_481b7e",
+        "assigned_station_ids": [
+          "stn_20260912T191833453491_d07271"
+        ]
+      }
+    },
+    {
+      "log_id": "log_20260912T191952189835_e8a9be",
+      "timestamp": "2026-09-12T19:19:52.189835Z",
+      "incident_id": "inc_20260912T191952178505_3b1578",
+      "actor_type": "agent",
+      "actor_id": "administrative-agent",
+      "event_type": "allocation_awaiting_human_approval",
+      "summary": "Allocation asg_20260912T191952184952_481b7e is awaiting human approval; no notification was sent.",
+      "payload": {
+        "assignment_id": "asg_20260912T191952184952_481b7e"
+      }
+    },
+    {
+      "log_id": "log_20260912T192100808321_f218ee",
+      "timestamp": "2026-09-12T19:21:00.808321Z",
+      "incident_id": "inc_20260912T191952178505_3b1578",
+      "actor_type": "human",
+      "actor_id": "demo-controller",
+      "event_type": "human_reviewed",
+      "summary": "Incident inc_20260912T191952178505_3b1578 reviewed: approved=True, notes=Demo operator confirmed the visible evidence.",
+      "payload": {
+        "approved": true,
+        "notes": "Demo operator confirmed the visible evidence.",
+        "previous_status": "awaiting_approval"
+      }
+    },
+    {
+      "log_id": "log_20260912T192137546073_da513a",
+      "timestamp": "2026-09-12T19:21:37.546073Z",
+      "incident_id": "inc_20260912T191952178505_3b1578",
+      "actor_type": "human",
+      "actor_id": "demo-controller",
+      "event_type": "allocation_decision",
+      "summary": "Allocation asg_20260912T191952184952_481b7e was approved by demo-controller.",
+      "payload": {
+        "approved": true,
+        "notes": "Resources confirmed for demonstration."
+      }
+    },
+    {
+      "log_id": "log_20260912T192231870850_f8586b",
+      "timestamp": "2026-09-12T19:22:31.870850Z",
+      "incident_id": "inc_20260912T191952178505_3b1578",
+      "actor_type": "system",
+      "actor_id": "notification-simulator",
+      "event_type": "simulated_notification",
+      "summary": "Simulated station/911 notification for allocation asg_20260912T191952184952_481b7e; no real call or message was made.",
+      "payload": {
+        "station_ids": [
+          "stn_20260912T191833453491_d07271"
+        ],
+        "simulate_911": false
+      }
+    },
+    {
+      "log_id": "log_20260912T192247881283_cc0205",
+      "timestamp": "2026-09-12T19:22:47.881283Z",
+      "incident_id": "inc_20260912T191952178505_3b1578",
+      "actor_type": "system",
+      "actor_id": null,
+      "event_type": "resolved",
+      "summary": "Incident inc_20260912T191952178505_3b1578 resolved.",
+      "payload": {
+        "previous_status": "notified",
+        "new_status": "resolved"
+      }
+    },
+    {
+      "log_id": "log_20260912T192248750082_99efb6",
+      "timestamp": "2026-09-12T19:22:48.750082Z",
+      "incident_id": "inc_20260912T191952178505_3b1578",
+      "actor_type": "system",
+      "actor_id": "notification-simulator",
+      "event_type": "simulated_notification",
+      "summary": "Simulated station/911 notification for allocation asg_20260912T191952184952_481b7e; no real call or message was made.",
+      "payload": {
+        "station_ids": [
+          "stn_20260912T191833453491_d07271"
+        ],
+        "simulate_911": false
+      }
+    }
+  ]
+}

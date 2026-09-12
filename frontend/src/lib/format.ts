@@ -12,6 +12,28 @@ export function formatCoordinate(lat: number, lon: number): string {
   return `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
 }
 
+export function formatIncidentType(type: string): string {
+  return type
+    .split("_")
+    .filter(Boolean)
+    .map((word) => word[0].toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
+export function hasReportedHazard(value: string | undefined): boolean {
+  if (!value) return false;
+  return !["", "none", "none visible", "unclear", "unknown"].includes(
+    value.trim().toLowerCase(),
+  );
+}
+
+export function formatAssignmentRationale(rationale: string): string {
+  return rationale
+    .replace(/incident_type='([^']+)'/g, (_, type: string) => `incident type ${formatIncidentType(type)}`)
+    .replace(/urgency=([a-z_]+)/g, (_, urgency: string) => `urgency ${formatIncidentType(urgency)}`)
+    .replace(/\[['"]?([A-Z]+)['"]?\]/g, "$1");
+}
+
 export const STATUS_LABEL: Record<IncidentStatus, string> = {
   new: "New",
   needs_review: "Needs Review",
