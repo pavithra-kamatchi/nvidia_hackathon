@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { formatDate, formatTime } from "../lib/format";
-import { ActivityIcon, CpuIcon, MenuIcon, WifiIcon } from "./icons";
+import { ActivityIcon, CpuIcon, WifiIcon } from "./icons";
 import type { Readiness } from "../types";
 
 function StatusPill({
@@ -17,6 +17,7 @@ function StatusPill({
       <span className="text-stone-400">{icon}</span>
       <span>{label}</span>
       <span
+        aria-hidden="true"
         className={`h-1.5 w-1.5 rounded-full ${healthy ? "bg-emerald-500" : "bg-red-500"}`}
       />
     </div>
@@ -40,14 +41,6 @@ export function Header({
   return (
     <header className="flex shrink-0 items-center justify-between gap-4 border-b border-stone-200/80 bg-[#faf9f7]/95 px-5 py-3.5 backdrop-blur lg:px-7">
       <div className="flex items-center gap-4">
-        <button
-          type="button"
-          aria-label="Open menu"
-          className="rounded-none border border-stone-200 bg-white p-2 text-stone-600 shadow-sm transition hover:border-stone-300 hover:bg-stone-50"
-        >
-          <MenuIcon className="h-6 w-6" />
-        </button>
-
         <div className="flex items-center gap-3">
           <img
             src="/logo.png"

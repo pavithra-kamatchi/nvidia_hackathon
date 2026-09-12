@@ -10,7 +10,10 @@ import {
   STATUS_LABEL,
   URGENCY_LABEL,
   URGENCY_TEXT,
+  formatAssignmentRationale,
   formatCoordinate,
+  formatIncidentType,
+  hasReportedHazard,
 } from "../lib/format";
 import type { Incident } from "../types";
 import {
@@ -31,10 +34,10 @@ function InfoRow({
   value: string;
 }) {
   return (
-    <div className="flex items-start gap-3 py-2">
+    <div className="flex items-start gap-3 py-1.5">
       <div className="mt-0.5 text-neutral-400">{icon}</div>
-      <div className="w-40 shrink-0 text-base text-neutral-500">{label}</div>
-      <div className="text-base font-medium text-neutral-900">{value}</div>
+      <div className="w-32 shrink-0 text-sm text-neutral-500">{label}</div>
+      <div className="text-sm font-semibold text-neutral-900">{value}</div>
     </div>
   );
 }
@@ -146,40 +149,46 @@ export function IncidentDetailPanel({
     URL.revokeObjectURL(url);
   }
 
+  const displayStatus =
+    incident.assignment?.decision === "rejected"
+      ? "Allocation Rejected"
+      : STATUS_LABEL[incident.status];
+  const showHazards = hasReportedHazard(incident.visible_hazards);
+
   return (
     <section className="panel flex h-full flex-col overflow-hidden">
-      <div className="flex shrink-0 items-center justify-between border-b border-red-100 bg-red-50/80 px-5 py-3">
-        <span className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-red-600">
-          Highest priority incident
+      <div className="flex shrink-0 items-center justify-between gap-4 border-b border-stone-100 bg-stone-50/80 px-5 py-3">
+        <span className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-stone-500">
+          Selected incident
         </span>
-        <span className="font-mono text-[11px] text-stone-400">
+        <span className="truncate font-mono text-[11px] text-stone-400">
           #{incident.incident_id}
         </span>
       </div>
 
-      <div className="flex shrink-0 items-center gap-4 px-5 pb-4 pt-4">
-        <div className="flex items-center gap-2">
+      <div className="flex shrink-0 items-center gap-3 px-5 pb-3 pt-3">
+        <div className="flex min-w-0 items-center gap-2">
           <AlertTriangleIcon
-            className={`h-7 w-7 ${URGENCY_TEXT[incident.urgency]}`}
+            className={`h-6 w-6 shrink-0 ${URGENCY_TEXT[incident.urgency]}`}
           />
           <span
-            className={`text-2xl font-extrabold tracking-[-0.03em] ${URGENCY_TEXT[incident.urgency]}`}
+            className={`text-xl font-extrabold ${URGENCY_TEXT[incident.urgency]}`}
           >
             {URGENCY_LABEL[incident.urgency]}
           </span>
         </div>
-        <div className="h-7 w-px bg-neutral-200" />
-        <div className="flex items-center gap-2">
-          <FlameIcon className="h-6 w-6 text-orange-500" />
-          <span className="text-lg font-bold text-stone-900">
-            {incident.incident_type}
+        <div className="h-6 w-px bg-neutral-200" />
+        <div className="flex min-w-0 items-center gap-2">
+          <FlameIcon className="h-5 w-5 shrink-0 text-orange-500" />
+          <span className="truncate text-base font-bold text-stone-900">
+            {formatIncidentType(incident.incident_type)}
           </span>
         </div>
-        <ChevronRightIcon className="ml-auto h-5 w-5 text-neutral-300" />
+        <ChevronRightIcon className="ml-auto h-5 w-5 shrink-0 text-neutral-300" />
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto">
-        <div className="divide-y divide-neutral-100 border-y border-neutral-100 px-5">
+      <div className="incident-queue-scroll min-h-0 flex-1 overflow-y-auto border-t border-neutral-100">
+        <div className="divide-y divide-neutral-100 px-5 py-1">
           <InfoRow
             icon={<MapPinIcon className="h-5 w-5" />}
             label="Location"
@@ -193,23 +202,38 @@ export function IncidentDetailPanel({
             label="People Detected"
             value={String(incident.number_of_people)}
           />
-          {incident.visible_hazards && (
+          {showHazards && (
             <InfoRow
               icon={<AlertTriangleIcon className="h-5 w-5" />}
               label="Visible Hazards"
-              value={incident.visible_hazards}
+              value={incident.visible_hazards ?? ""}
             />
           )}
         </div>
 
         {incident.reasoning && (
-          <div className="mx-5 mt-3 rounded-none bg-neutral-50 p-3.5">
+          <div className="mx-5 mt-3 bg-neutral-50 p-3">
             <div className="mb-1 text-[10px] font-extrabold uppercase tracking-[0.14em] text-stone-500">
               AI assessment
             </div>
             <p className="text-sm leading-relaxed text-stone-600">
               {incident.reasoning}
             </p>
+          </div>
+        )}
+
+        {incident.assignment && (
+          <div className="mx-5 my-3 border border-stone-200 bg-stone-50 p-3 text-xs text-stone-700">
+            <div className="font-bold uppercase tracking-[0.1em] text-stone-500">
+              Proposed allocation
+            </div>
+            <div className="mt-2">
+              Stations: {incident.assignment.assigned_station_ids.join(", ") || "No available station"}
+            </div>
+            <div className="mt-1">{formatAssignmentRationale(incident.assignment.rationale)}</div>
+            <div className="mt-1 font-semibold">
+              Decision: {incident.assignment.decision ? formatIncidentType(incident.assignment.decision) : "Awaiting Operator"}
+            </div>
           </div>
         )}
       </div>
@@ -243,43 +267,11 @@ export function IncidentDetailPanel({
             </div>
           </div>
         )}
-        {incident.assignment && (
-          <div className="mb-3 border border-stone-200 bg-stone-50 p-3 text-xs text-stone-700">
-            <div className="font-bold uppercase tracking-[0.1em] text-stone-500">
-              Proposed allocation
-            </div>
-            <div className="mt-2">
-              Stations: {incident.assignment.assigned_station_ids.join(", ") || "No available station"}
-            </div>
-            <div className="mt-1">{incident.assignment.rationale}</div>
-            <div className="mt-1 font-semibold">
-              Decision: {incident.assignment.decision ?? "awaiting operator"}
-            </div>
-            {!incident.needs_human_verification && !incident.assignment.decision && (
-              <div className="mt-3 flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleAllocationDecision(true)}
-                  disabled={reviewing}
-                  className="bg-stone-950 px-3 py-1.5 font-bold text-white disabled:opacity-60"
-                >
-                  Approve allocation
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleAllocationDecision(false)}
-                  disabled={reviewing}
-                  className="border border-stone-300 px-3 py-1.5 font-bold disabled:opacity-60"
-                >
-                  Reject allocation
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-
         {notice && (
-          <div className="mb-3 border border-emerald-300 bg-emerald-50 p-2 text-xs font-semibold text-emerald-900">
+          <div
+            role="status"
+            className="mb-3 border border-emerald-300 bg-emerald-50 p-2 text-xs font-semibold text-emerald-900"
+          >
             {notice}
           </div>
         )}
@@ -289,9 +281,30 @@ export function IncidentDetailPanel({
             Status
           </span>
           <span className="border border-stone-200 bg-white px-3 py-2 text-sm font-semibold text-stone-800">
-            {STATUS_LABEL[incident.status]}
+            {displayStatus}
           </span>
         </div>
+
+        {incident.assignment && !incident.needs_human_verification && !incident.assignment.decision && (
+          <div className="mb-2 grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => handleAllocationDecision(true)}
+              disabled={reviewing}
+              className="bg-stone-950 px-3 py-2 text-xs font-bold text-white disabled:opacity-60"
+            >
+              Approve allocation
+            </button>
+            <button
+              type="button"
+              onClick={() => handleAllocationDecision(false)}
+              disabled={reviewing}
+              className="border border-stone-300 px-3 py-2 text-xs font-bold disabled:opacity-60"
+            >
+              Reject allocation
+            </button>
+          </div>
+        )}
 
         {incident.assignment?.decision === "approved" && incident.status !== "notified" && (
           <button

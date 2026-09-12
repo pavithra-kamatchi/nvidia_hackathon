@@ -50,6 +50,11 @@ def _extract_json(content: str) -> dict:
     raise ValueError("Local reasoner did not return a JSON object")
 
 
+def _has_reported_hazard(visible_hazards: str) -> bool:
+    hazard = visible_hazards.strip().lower()
+    return hazard not in ("", "none", "none visible", "unclear", "unknown")
+
+
 def _deterministic_assessment(
     detection: Detection,
     poses: List[RawPoseDetection],
@@ -60,8 +65,7 @@ def _deterministic_assessment(
         for pose in poses
         if pose.pose.value in ("lying", "kneeling", "bent")
     ]
-    hazard = detection.visible_hazards.strip().lower()
-    has_hazard = hazard not in ("", "none", "none visible", "unclear", "unknown")
+    has_hazard = _has_reported_hazard(detection.visible_hazards)
     reasons: List[str] = []
 
     if detection.blood:
@@ -181,13 +185,23 @@ class LocalNemotronReasoner:
             # Deterministic safety rules override any less-cautious model result.
             evidence_conflict = (
                 urgency == Urgency.low
-                and (detection.blood or bool(poses) and any(
-                    pose.pose.value in ("lying", "kneeling", "bent") for pose in poses
-                ))
+                and (
+                    detection.blood
+                    or _has_reported_hazard(detection.visible_hazards)
+                    or bool(poses)
+                    and any(
+                        pose.pose.value in ("lying", "kneeling", "bent") for pose in poses
+                    )
+                )
             )
             if evidence_conflict:
-                urgency = Urgency.unclear
-                reasoning += " The low-urgency classification conflicts with visible evidence."
+                if _has_reported_hazard(detection.visible_hazards) and not detection.blood:
+                    urgency = Urgency.medium
+                    if incident_type == "person_detected":
+                        incident_type = "person_near_hazard"
+                else:
+                    urgency = Urgency.unclear
+                reasoning += " The low-urgency classification conflicts with visible hazard or injury evidence."
             needs_human = (
                 model_requires_human
                 or evidence_conflict

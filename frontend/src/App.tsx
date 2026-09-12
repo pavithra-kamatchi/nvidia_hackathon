@@ -125,7 +125,10 @@ function App() {
       <Header live={live} readiness={readiness} />
 
       {error && (
-        <div className="border-b border-red-300 bg-red-50 px-5 py-2 text-sm font-semibold text-red-900">
+        <div
+          role="alert"
+          className="border-b border-red-300 bg-red-50 px-5 py-2 text-sm font-semibold text-red-900"
+        >
           {live ? "Action failed." : "Backend disconnected. No demonstration data is being substituted."}{" "}
           {error}
         </div>

@@ -75,7 +75,7 @@ export function DroneFeedPanel({
         </div>
 
         <label
-          className={`absolute right-4 top-4 flex min-h-10 cursor-pointer items-center gap-2 rounded-none bg-amber-500 px-3 py-2 text-[10px] font-extrabold uppercase tracking-[0.12em] text-stone-950 shadow-lg transition hover:bg-amber-400 ${
+          className={`absolute right-4 top-4 flex min-h-10 cursor-pointer items-center gap-2 rounded-none bg-amber-500 px-3 py-2 text-[10px] font-extrabold uppercase tracking-[0.12em] text-stone-950 shadow-lg transition hover:bg-amber-400 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-amber-700 ${
             isUploading ? "pointer-events-none opacity-80" : ""
           }`}
           title="Upload an image for triage"
@@ -92,7 +92,10 @@ export function DroneFeedPanel({
         </label>
 
         {uploadError && (
-          <div className="absolute right-4 top-16 max-w-64 rounded-none border border-red-300 bg-red-50 px-3 py-2 text-xs font-semibold text-red-800 shadow-lg">
+          <div
+            role="alert"
+            className="absolute right-4 top-16 max-w-64 rounded-none border border-red-300 bg-red-50 px-3 py-2 text-xs font-semibold text-red-800 shadow-lg"
+          >
             {uploadError}
           </div>
         )}
