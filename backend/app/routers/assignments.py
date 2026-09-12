@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from typing import Optional
+from typing import List, Optional
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
@@ -11,6 +11,53 @@ from app.schemas.assignment import Assignment
 from app.schemas.common import IncidentStatus
 
 router = APIRouter(tags=["assignments"])
+
+
+async def _dispatch_stations(assignment: Assignment, station_ids: List[str]) -> None:
+    """Deducts each newly-dispatching station's share of
+    assignment.recommended_resources (split across multiple stations when
+    more than one dispatches, since that dict is the *combined* total the
+    incident needs, not a per-station amount), marks the station deployed to
+    the incident, and records exactly what was taken in
+    assignment.resource_commitments so resolve_incident can credit it back.
+
+    Safe to call more than once for the same assignment (e.g. once from
+    approval covering every recommended station, and again from a later
+    per-station response): a station already present in
+    resource_commitments is left untouched, so nothing is ever double-
+    deducted, and remaining need is computed fresh from whatever hasn't been
+    committed yet.
+    """
+    remaining = dict(assignment.recommended_resources)
+    for station_id in assignment.assigned_station_ids:
+        for responder_type, amount in assignment.resource_commitments.get(station_id, {}).items():
+            remaining[responder_type] = remaining.get(responder_type, 0) - amount
+
+    for station_id in station_ids:
+        if station_id in assignment.resource_commitments:
+            continue
+        station = await station_repo.get(station_id)
+        if station is None:
+            continue
+
+        sent = {}
+        for responder_type in list(remaining.keys()):
+            if responder_type not in station.responder_types:
+                continue
+            need = remaining.get(responder_type, 0)
+            if need <= 0:
+                continue
+            take = min(station.available_responders.get(responder_type, 0), need)
+            if take <= 0:
+                continue
+            sent[responder_type] = take
+            station.available_responders[responder_type] -= take
+            remaining[responder_type] -= take
+
+        if assignment.incident_id not in station.current_deployments:
+            station.current_deployments.append(assignment.incident_id)
+        await station_repo.replace(station)
+        assignment.resource_commitments[station_id] = sent
 
 
 @router.get("/assignments/{assignment_id}", response_model=Assignment)
@@ -59,15 +106,50 @@ async def decide_allocation(assignment_id: str, payload: DecisionRequest):
     assignment.status = assignment.decision
     assignment.decided_by = payload.operator_id
     assignment.decided_at = datetime.now(timezone.utc)
+
+    incident = await incident_repo.get(assignment.incident_id) if payload.approved else None
+
+    if payload.approved:
+        # Approving the allocation is the operator committing every
+        # recommended station's responders/vehicles to this incident right
+        # now, not just recording a decision — so their rosters need to
+        # reflect that immediately, for every other incident's planning.
+        await _dispatch_stations(assignment, assignment.assigned_station_ids)
+
+        if incident is not None and incident.status in (IncidentStatus.awaiting_approval, IncidentStatus.notified):
+            incident.status = IncidentStatus.dispatched
+            incident.last_updated = datetime.now(timezone.utc)
+            await incident_repo.replace(incident)
+
     await assignment_repo.replace(assignment)
     await monitoring_agent.log(
         "allocation_decision",
         f"Allocation {assignment_id} was {assignment.decision} by {payload.operator_id}.",
         incident_id=assignment.incident_id,
-        payload={"approved": payload.approved, "notes": payload.notes},
+        payload={
+            "approved": payload.approved,
+            "notes": payload.notes,
+            "resource_commitments": assignment.resource_commitments if payload.approved else {},
+        },
         actor_type="human",
         actor_id=payload.operator_id,
     )
+
+    if payload.approved and assignment.requires_additional_support:
+        other_station_ids = [
+            s.station_id for s in await station_repo.list() if s.station_id not in assignment.assigned_station_ids
+        ]
+        if other_station_ids:
+            await monitoring_agent.log(
+                "additional_help_requested",
+                f"Allocation {assignment_id} for incident {assignment.incident_id} did not have enough station "
+                f"capacity at planning time; alerting station(s) {', '.join(other_station_ids)} for help.",
+                incident_id=assignment.incident_id,
+                payload={"assignment_id": assignment_id, "alerted_station_ids": other_station_ids},
+                actor_type="agent",
+                actor_id="administrative-agent",
+            )
+
     return assignment
 
 
@@ -84,7 +166,7 @@ async def simulate_notification(assignment_id: str):
     incident = await incident_repo.get(assignment.incident_id)
     if incident is None:
         raise HTTPException(status_code=404, detail="Incident not found")
-    if incident.status != IncidentStatus.awaiting_approval:
+    if incident.status not in (IncidentStatus.awaiting_approval, IncidentStatus.dispatched):
         raise HTTPException(
             status_code=409,
             detail=f"Cannot notify stations when incident status is {incident.status.value}",
@@ -104,9 +186,13 @@ async def simulate_notification(assignment_id: str):
         actor_type="system",
         actor_id="notification-simulator",
     )
-    incident.status = IncidentStatus.notified
-    incident.last_updated = datetime.now(timezone.utc)
-    await incident_repo.replace(incident)
+    # Approval already advances a covered incident straight to `dispatched`
+    # (stations' resources are committed at that point); don't regress that
+    # back to `notified` here — this step is just the simulated broadcast.
+    if incident.status == IncidentStatus.awaiting_approval:
+        incident.status = IncidentStatus.notified
+        incident.last_updated = datetime.now(timezone.utc)
+        await incident_repo.replace(incident)
     assignment.status = "notified"
     await assignment_repo.replace(assignment)
     return {
@@ -134,24 +220,7 @@ async def respond_to_assignment(assignment_id: str, payload: RespondRequest):
         if payload.station_id in assignment.rejected_station_ids:
             assignment.rejected_station_ids.remove(payload.station_id)
 
-        station = await station_repo.get(payload.station_id)
-        if station is not None:
-            # Only deduct what this station actually has on hand for each
-            # needed responder type, capped by the coordinator's recommended
-            # amount, so a station can never go negative.
-            sent = {
-                responder_type: min(station.available_responders.get(responder_type, 0), amount)
-                for responder_type, amount in assignment.recommended_resources.items()
-                if responder_type in station.responder_types
-                and min(station.available_responders.get(responder_type, 0), amount) > 0
-            }
-            for responder_type, amount in sent.items():
-                station.available_responders[responder_type] -= amount
-            if assignment.incident_id not in station.current_deployments:
-                station.current_deployments.append(assignment.incident_id)
-            await station_repo.replace(station)
-            assignment.resource_commitments[payload.station_id] = sent
-
+        await _dispatch_stations(assignment, [payload.station_id])
         await assignment_repo.replace(assignment)
 
         incident = await incident_repo.get(assignment.incident_id)
