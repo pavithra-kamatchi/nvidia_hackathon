@@ -32,6 +32,7 @@ async def get_incident(incident_id: str):
 
 class ReviewRequest(BaseModel):
     approved: bool
+    operator_id: str
     override_urgency: Optional[Urgency] = None
     notes: Optional[str] = None
 
@@ -45,6 +46,7 @@ async def review_incident(incident_id: str, payload: ReviewRequest):
     if incident is None:
         raise HTTPException(status_code=404, detail="Incident not found")
 
+    previous_status = incident.status.value
     if not payload.approved:
         incident.status = IncidentStatus.false_positive
     else:
@@ -59,7 +61,9 @@ async def review_incident(incident_id: str, payload: ReviewRequest):
         "human_reviewed",
         f"Incident {incident_id} reviewed: approved={payload.approved}, notes={payload.notes or ''}".strip(),
         incident_id=incident_id,
-        payload={"approved": payload.approved, "notes": payload.notes},
+        payload={"approved": payload.approved, "notes": payload.notes, "previous_status": previous_status},
+        actor_type="human",
+        actor_id=payload.operator_id,
     )
     return incident
 
@@ -68,40 +72,28 @@ class DispatchRequest(BaseModel):
     station_ids: List[str]
 
 
-@router.post("/incidents/{incident_id}/dispatch", response_model=Incident)
+@router.post("/incidents/{incident_id}/dispatch")
 async def dispatch_incident(incident_id: str, payload: DispatchRequest):
-    """Marks the incident (and its latest Assignment) as dispatched, and
-    commits the chosen stations by adding this incident to their
-    current_deployments."""
+    """Backward-compatible simulation endpoint; never dispatches resources."""
     incident = await incident_repo.get(incident_id)
     if incident is None:
         raise HTTPException(status_code=404, detail="Incident not found")
 
     assignments = await assignment_repo.list({"incident_id": incident_id}, sort_field="created_at")
-    if assignments:
-        assignment = assignments[0]
-        assignment.status = "dispatched"
-        assignment.accepted_station_ids = payload.station_ids
-        await assignment_repo.replace(assignment)
+    if not assignments or assignments[0].decision != "approved":
+        raise HTTPException(status_code=409, detail="Human approval is required before simulated dispatch")
 
-    for station_id in payload.station_ids:
-        station = await station_repo.get(station_id)
-        if station is None:
-            continue
-        if incident_id not in station.current_deployments:
-            station.current_deployments.append(incident_id)
-            await station_repo.replace(station)
-
-    incident.status = IncidentStatus.dispatched
-    incident.last_updated = datetime.now(timezone.utc)
-    await incident_repo.replace(incident)
     await monitoring_agent.log(
-        "dispatched",
-        f"Station(s) {payload.station_ids} dispatched to incident {incident_id}.",
+        "simulated_dispatch",
+        f"Simulated dispatch to station(s) {payload.station_ids}; no real station or 911 call was made.",
         incident_id=incident_id,
-        payload={"station_ids": payload.station_ids},
+        payload={"station_ids": payload.station_ids, "assignment_id": assignments[0].assignment_id},
     )
-    return incident
+    return {
+        "status": "simulated",
+        "incident_id": incident_id,
+        "message": "No real station notification, dispatch, or 911 call was made.",
+    }
 
 
 @router.post("/incidents/{incident_id}/resolve", response_model=Incident)
@@ -110,6 +102,7 @@ async def resolve_incident(incident_id: str):
     if incident is None:
         raise HTTPException(status_code=404, detail="Incident not found")
 
+    previous_status = incident.status.value
     incident.status = IncidentStatus.resolved
     incident.last_updated = datetime.now(timezone.utc)
     await incident_repo.replace(incident)
@@ -125,7 +118,12 @@ async def resolve_incident(incident_id: str):
             station.current_deployments.remove(incident_id)
             await station_repo.replace(station)
 
-    await monitoring_agent.log("resolved", f"Incident {incident_id} resolved.", incident_id=incident_id)
+    await monitoring_agent.log(
+        "resolved",
+        f"Incident {incident_id} resolved.",
+        incident_id=incident_id,
+        payload={"previous_status": previous_status, "new_status": IncidentStatus.resolved.value},
+    )
     await monitoring_agent.save_report(incident_id)
     return incident
 

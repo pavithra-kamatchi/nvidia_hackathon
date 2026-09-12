@@ -15,12 +15,22 @@ class MonitoringAgent:
     hackathon pipeline, each pipeline step calls `log()` explicitly at the
     point a state change happens."""
 
-    async def log(self, event_type: str, summary: str, incident_id: Optional[str] = None, payload: Optional[Dict[str, Any]] = None) -> LogEntry:
+    async def log(
+        self,
+        event_type: str,
+        summary: str,
+        incident_id: Optional[str] = None,
+        payload: Optional[Dict[str, Any]] = None,
+        actor_type: str = "system",
+        actor_id: Optional[str] = None,
+    ) -> LogEntry:
         now = datetime.now(timezone.utc)
         entry = LogEntry(
             log_id=generate_id("log", now),
             timestamp=now,
             incident_id=incident_id,
+            actor_type=actor_type,
+            actor_id=actor_id,
             event_type=event_type,
             summary=summary,
             payload=payload or {},

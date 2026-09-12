@@ -6,7 +6,7 @@ class Settings:
     mongodb_db_name: str = os.getenv("MONGODB_DB_NAME", "drone_ecs")
 
     # Confidence below this forces needs_human_verification on an assessment.
-    confidence_threshold: float = float(os.getenv("CONFIDENCE_THRESHOLD", "0.6"))
+    confidence_threshold: float = float(os.getenv("CONFIDENCE_THRESHOLD", "0.70"))
 
     # Incident dedup: a new detection is folded into an existing open incident
     # instead of creating a new one when it falls within both windows below.
@@ -17,6 +17,12 @@ class Settings:
     multi_station_people_threshold: int = int(os.getenv("MULTI_STATION_PEOPLE_THRESHOLD", "4"))
 
     media_root: str = os.getenv("MEDIA_ROOT", "media")
+
+    nemotron_url: str = os.getenv(
+        "NEMOTRON_URL", "http://127.0.0.1:8000/v1/chat/completions"
+    )
+    nemotron_model: str = os.getenv("NEMOTRON_MODEL", "nemotron")
+    nemotron_timeout_seconds: float = float(os.getenv("NEMOTRON_TIMEOUT_SECONDS", "120"))
 
 
 settings = Settings()
