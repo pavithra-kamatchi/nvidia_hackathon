@@ -55,6 +55,7 @@ async def review_incident(incident_id: str, payload: ReviewRequest):
     previous_status = incident.status.value
     if not payload.approved:
         incident.status = IncidentStatus.false_positive
+        incident.needs_human_verification = False
         incident.last_updated = datetime.now(timezone.utc)
         await incident_repo.replace(incident)
     else:
