@@ -25,12 +25,30 @@ def _incident() -> Incident:
 
 
 class HumanApprovalFlowTests(unittest.IsolatedAsyncioTestCase):
-    async def test_observation_review_does_not_notify(self):
+    async def test_approved_review_runs_coordinator_and_notification(self):
         incident = _incident()
+        now = datetime.now(timezone.utc)
+        assignment = Assignment(
+            assignment_id="asg-test",
+            incident_id=incident.incident_id,
+            assigned_station_ids=["station-test"],
+            recommended_resources={"fire": 1},
+            priority=1,
+            rationale="Test allocation.",
+            escalate_to_911=True,
+            requires_multi_station=False,
+            requires_additional_support=False,
+            status="proposed",
+            accepted_station_ids=[],
+            rejected_station_ids=[],
+            created_at=now,
+        )
         with (
             patch("app.routers.incidents.incident_repo.get", AsyncMock(return_value=incident)),
             patch("app.routers.incidents.incident_repo.replace", AsyncMock()),
             patch("app.routers.incidents.monitoring_agent.log", AsyncMock()),
+            patch("app.routers.incidents.coordinator_agent.run", AsyncMock(return_value=assignment)) as run_coordinator,
+            patch("app.routers.incidents.notification_agent.run", AsyncMock(return_value=incident)) as run_notification,
         ):
             result = await review_incident(
                 incident.incident_id,
@@ -38,6 +56,8 @@ class HumanApprovalFlowTests(unittest.IsolatedAsyncioTestCase):
             )
         self.assertEqual(result.status, IncidentStatus.awaiting_approval)
         self.assertFalse(result.needs_human_verification)
+        run_coordinator.assert_awaited_once()
+        run_notification.assert_awaited_once()
 
     async def test_approved_allocation_notification_is_simulated_and_recorded(self):
         incident = _incident()
@@ -66,6 +86,7 @@ class HumanApprovalFlowTests(unittest.IsolatedAsyncioTestCase):
             patch("app.routers.assignments.incident_repo.get", AsyncMock(return_value=incident)),
             patch("app.routers.assignments.incident_repo.replace", AsyncMock()) as replace_incident,
             patch("app.routers.assignments.monitoring_agent.log", AsyncMock()),
+            patch("app.routers.assignments.station_repo.list", AsyncMock(return_value=[])),
         ):
             result = await simulate_notification(assignment.assignment_id)
         self.assertEqual(result["status"], "simulated")

@@ -227,7 +227,11 @@ export function IncidentDetailPanel({
               Proposed allocation
             </div>
             <div className="mt-2">
-              Stations: {incident.assignment.assigned_station_ids.join(", ") || "No available station"}
+              Recommended station(s): {incident.assignment.assigned_station_ids.join(", ") || "No available station"}
+            </div>
+            <div className="mt-1 text-stone-500">
+              Alert broadcasts to every registered station; the recommendation above is the
+              nearest station with available capacity.
             </div>
             <div className="mt-1">{formatAssignmentRationale(incident.assignment.rationale)}</div>
             <div className="mt-1 font-semibold">

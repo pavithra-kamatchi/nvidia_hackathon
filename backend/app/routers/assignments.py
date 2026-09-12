@@ -1,11 +1,12 @@
 from datetime import datetime, timezone
+from typing import Optional
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from app.agents.coordinator import coordinator_agent
 from app.agents.monitoring import monitoring_agent
-from app.repositories.collections import assignment_repo, incident_repo
+from app.repositories.collections import assignment_repo, incident_repo, station_repo
 from app.schemas.assignment import Assignment
 from app.schemas.common import IncidentStatus
 
@@ -45,7 +46,7 @@ class RespondRequest(BaseModel):
 class DecisionRequest(BaseModel):
     approved: bool
     operator_id: str
-    notes: str | None = None
+    notes: Optional[str] = None
 
 
 @router.post("/allocations/{assignment_id}/decision", response_model=Assignment)
@@ -84,12 +85,16 @@ async def simulate_notification(assignment_id: str):
     if incident is None:
         raise HTTPException(status_code=404, detail="Incident not found")
 
+    all_station_ids = [s.station_id for s in await station_repo.list()]
     await monitoring_agent.log(
         "simulated_notification",
-        f"Simulated station/911 notification for allocation {assignment_id}; no real call or message was made.",
+        f"Simulated notification broadcast to all {len(all_station_ids)} registered station(s) for allocation "
+        f"{assignment_id} (recommended: {', '.join(assignment.assigned_station_ids) or 'none available'}); "
+        "no real call or message was made.",
         incident_id=assignment.incident_id,
         payload={
-            "station_ids": assignment.assigned_station_ids,
+            "notified_station_ids": all_station_ids,
+            "recommended_station_ids": assignment.assigned_station_ids,
             "simulate_911": assignment.escalate_to_911,
         },
         actor_type="system",
