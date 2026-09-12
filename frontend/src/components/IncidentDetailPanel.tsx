@@ -184,7 +184,6 @@ export function IncidentDetailPanel({
             {formatIncidentType(incident.incident_type)}
           </span>
         </div>
-        <ChevronRightIcon className="ml-auto h-5 w-5 shrink-0 text-neutral-300" />
       </div>
 
       <div className="incident-queue-scroll min-h-0 flex-1 overflow-y-auto border-t border-neutral-100">
