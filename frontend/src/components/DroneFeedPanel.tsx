@@ -17,7 +17,10 @@ export function DroneFeedPanel({
   const latestLog = logs[0];
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
-  const feedImage = useMemo(() => (incident?.image_url ? apiUrl(incident.image_url) : "/live-feed.png"), [incident?.image_url]);
+  const feedImage = useMemo(
+    () => (incident?.image_url ? apiUrl(incident.image_url) : "/live-feed.png"),
+    [incident?.image_url],
+  );
 
   async function handleUpload(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -25,9 +28,15 @@ export function DroneFeedPanel({
     setUploadError(null);
     setIsUploading(true);
     try {
-      await onIngest(file, incident?.location.latitude ?? 42.4483, incident?.location.longitude ?? -76.4791);
+      await onIngest(
+        file,
+        incident?.location.latitude ?? 42.4483,
+        incident?.location.longitude ?? -76.4791,
+      );
     } catch (error) {
-      setUploadError(error instanceof Error ? error.message : "Image upload failed");
+      setUploadError(
+        error instanceof Error ? error.message : "Image upload failed",
+      );
     } finally {
       setIsUploading(false);
       event.target.value = "";
@@ -45,13 +54,22 @@ export function DroneFeedPanel({
           <MapPinIcon className="h-4 w-4" />
           Location
           <span className="font-bold text-stone-900">
-            {incident ? formatCoordinate(incident.location.latitude, incident.location.longitude) : "—"}
+            {incident
+              ? formatCoordinate(
+                  incident.location.latitude,
+                  incident.location.longitude,
+                )
+              : "—"}
           </span>
         </div>
       </div>
 
       <div className="relative min-h-0 w-full flex-1 overflow-hidden bg-neutral-900">
-        <img src={feedImage} alt="Image selected for triage" className="absolute inset-0 h-full w-full object-cover brightness-[0.88] saturate-[0.85]" />
+        <img
+          src={feedImage}
+          alt="Image selected for triage"
+          className="absolute inset-0 h-full w-full object-cover brightness-[0.88] saturate-[0.85]"
+        />
 
         <div className="absolute left-4 top-4 rounded-md border border-white/20 bg-stone-950/50 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-white/80 backdrop-blur-sm">
           Camera 01 / Thermal + RGB
@@ -65,7 +83,13 @@ export function DroneFeedPanel({
         >
           <UploadIcon className="h-4 w-4 shrink-0" />
           <span>{isUploading ? "Analyzing..." : "Upload image"}</span>
-          <input type="file" accept="image/*" onChange={handleUpload} disabled={isUploading} className="sr-only" />
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleUpload}
+            disabled={isUploading}
+            className="sr-only"
+          />
         </label>
 
         {uploadError && (
@@ -86,7 +110,8 @@ export function DroneFeedPanel({
 
         <div className="absolute inset-x-0 bottom-0 flex items-end justify-between px-4 py-3 text-sm text-neutral-200">
           <div className="rounded-md border border-white/10 bg-black/35 px-2.5 py-1.5 text-[11px] font-medium backdrop-blur-sm">
-            DJI M3T&nbsp;&nbsp;|&nbsp;&nbsp;Alt: 120 m&nbsp;&nbsp;|&nbsp;&nbsp;Zoom: 3.2x
+            DJI M3T&nbsp;&nbsp;|&nbsp;&nbsp;Alt: 120
+            m&nbsp;&nbsp;|&nbsp;&nbsp;Zoom: 3.2x
           </div>
 
           <div className="flex flex-col items-end gap-1.5">
@@ -102,7 +127,9 @@ export function DroneFeedPanel({
 
         {latestLog && (
           <div className="absolute bottom-4 left-1/2 hidden max-w-[48%] -translate-x-1/2 rounded-md border border-white/10 bg-black/45 px-3 py-2 text-center text-[10px] text-white/80 backdrop-blur-sm md:block">
-            <span className="mr-1.5 font-bold uppercase tracking-[0.12em] text-amber-300">Agent activity</span>
+            <span className="mr-1.5 font-bold uppercase tracking-[0.12em] text-amber-300">
+              Agent activity
+            </span>
             {latestLog.summary}
           </div>
         )}

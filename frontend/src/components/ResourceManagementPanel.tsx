@@ -3,7 +3,15 @@ import { fetchStation, updateStation } from "../api";
 import type { Station } from "../types";
 import { MinusIcon, PlusIcon, TruckIcon, UsersIcon, WrenchIcon } from "./icons";
 
-function StepButton({ onClick, label, children }: { onClick: () => void; label: string; children: React.ReactNode }) {
+function StepButton({
+  onClick,
+  label,
+  children,
+}: {
+  onClick: () => void;
+  label: string;
+  children: React.ReactNode;
+}) {
   return (
     <button
       type="button"
@@ -56,10 +64,16 @@ export function ResourceManagementPanel() {
   }, []);
 
   if (!station) {
-    return <section className="h-full rounded-xl border border-neutral-200 bg-white" />;
+    return (
+      <section className="h-full rounded-xl border border-neutral-200 bg-white" />
+    );
   }
 
-  function persist(patch: Partial<Pick<Station, "available_responders" | "available_vehicles">>) {
+  function persist(
+    patch: Partial<
+      Pick<Station, "available_responders" | "available_vehicles">
+    >,
+  ) {
     if (!station) return;
     updateStation(station.station_id, patch);
   }
@@ -68,7 +82,10 @@ export function ResourceManagementPanel() {
     setStation((prev) => {
       if (!prev) return prev;
       const next = Math.max(0, (prev.available_responders[type] ?? 0) + delta);
-      const available_responders = { ...prev.available_responders, [type]: next };
+      const available_responders = {
+        ...prev.available_responders,
+        [type]: next,
+      };
       persist({ available_responders });
       return { ...prev, available_responders };
     });
@@ -88,9 +105,13 @@ export function ResourceManagementPanel() {
       <div className="flex shrink-0 items-center justify-between px-5 py-3">
         <div>
           <p className="eyebrow">Readiness</p>
-          <h2 className="mt-0.5 text-base font-bold text-stone-900">Resource management</h2>
+          <h2 className="mt-0.5 text-base font-bold text-stone-900">
+            Resource management
+          </h2>
         </div>
-        <span className="hidden text-xs font-medium text-stone-400 sm:block">{station.name}</span>
+        <span className="hidden text-xs font-medium text-stone-400 sm:block">
+          {station.name}
+        </span>
       </div>
 
       <div className="min-h-0 flex-1 space-y-2.5 overflow-y-auto px-5 pb-3">

@@ -32,9 +32,15 @@ export function Header({ live }: { live: boolean }) {
         </button>
 
         <div className="flex items-center gap-3">
-          <img src="/logo.png" alt="SCOUT" className="h-10 w-10 object-contain" />
+          <img
+            src="/logo.png"
+            alt="SCOUT"
+            className="h-10 w-10 object-contain"
+          />
           <div className="leading-tight">
-            <div className="text-xl font-extrabold tracking-[-0.04em] text-stone-950">SCOUT<span className="text-amber-600">.</span></div>
+            <div className="text-xl font-extrabold tracking-[-0.04em] text-stone-950">
+              SCOUT<span className="text-amber-600">.</span>
+            </div>
             <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-stone-400">
               AI for Public Safety
             </div>
@@ -45,15 +51,25 @@ export function Header({ live }: { live: boolean }) {
       <div className="flex items-center gap-4 sm:gap-6">
         <div className="hidden items-center gap-5 sm:flex">
           <StatusPill icon={<CpuIcon className="h-5 w-5" />} label="Local AI" />
-          <StatusPill icon={<WifiIcon className="h-5 w-5" />} label={live ? "Live Backend" : "Offline Mode"} />
-          <StatusPill icon={<ActivityIcon className="h-5 w-5" />} label="Active" />
+          <StatusPill
+            icon={<WifiIcon className="h-5 w-5" />}
+            label={live ? "Live Backend" : "Offline Mode"}
+          />
+          <StatusPill
+            icon={<ActivityIcon className="h-5 w-5" />}
+            label="Active"
+          />
         </div>
 
         <div className="h-9 w-px bg-neutral-200" />
 
         <div className="text-right leading-tight">
-          <div className="text-sm font-bold text-stone-900 sm:text-base">{formatTime(now)}</div>
-          <div className="text-[11px] font-medium text-stone-400">{formatDate(now)}</div>
+          <div className="text-sm font-bold text-stone-900 sm:text-base">
+            {formatTime(now)}
+          </div>
+          <div className="text-[11px] font-medium text-stone-400">
+            {formatDate(now)}
+          </div>
         </div>
       </div>
     </header>
