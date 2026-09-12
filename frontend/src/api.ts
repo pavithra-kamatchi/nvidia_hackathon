@@ -2,6 +2,7 @@ import type {
   Assignment,
   Incident,
   IncidentReport,
+  IncidentStatus,
   IngestResponse,
   LogEntry,
   Readiness,

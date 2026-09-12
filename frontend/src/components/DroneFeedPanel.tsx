@@ -67,12 +67,8 @@ export function DroneFeedPanel({
         <img
           src={feedImage}
           alt="Image selected for triage"
-          className="absolute inset-0 h-full w-full object-cover brightness-[0.88] saturate-[0.85]"
+          className="absolute inset-0 h-full w-full object-contain brightness-[0.88] saturate-[0.85]"
         />
-
-        <div className="absolute left-4 top-4 rounded-none border border-white/20 bg-stone-950/50 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-white/80 backdrop-blur-sm">
-          Uploaded drone image / RGB
-        </div>
 
         <label
           className={`absolute right-4 top-4 flex min-h-10 cursor-pointer items-center gap-2 rounded-none bg-amber-500 px-3 py-2 text-[10px] font-extrabold uppercase tracking-[0.12em] text-stone-950 shadow-lg transition hover:bg-amber-400 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-amber-700 ${

@@ -121,7 +121,7 @@ function App() {
   }
 
   return (
-    <div className="app-shell flex h-screen flex-col overflow-hidden">
+    <div className="app-shell flex h-dvh flex-col overflow-hidden">
       <Header live={live} readiness={readiness} />
 
       {error && (
