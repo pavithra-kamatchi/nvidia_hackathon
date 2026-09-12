@@ -8,6 +8,8 @@ This adapter reports visible posture only. It does not diagnose injuries,
 determine urgency, or dispatch resources.
 """
 
+from __future__ import annotations
+
 import io
 import os
 import threading
