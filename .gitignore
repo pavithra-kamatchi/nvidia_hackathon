@@ -4,6 +4,8 @@ __pycache__/
 .venv/
 media/
 .DS_Store
+# backend
+backend/weights/*.pt
 
 # frontend
 frontend/node_modules/

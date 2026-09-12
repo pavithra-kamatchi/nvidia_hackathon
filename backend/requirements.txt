@@ -4,3 +4,6 @@ motor>=3.5
 pymongo>=4.8
 python-multipart>=0.0.9
 pydantic>=2.11
+numpy
+Pillow
+ultralytics==8.4.148
