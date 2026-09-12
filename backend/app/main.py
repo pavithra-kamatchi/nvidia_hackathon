@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.db import close_database, ensure_indexes, get_database
 from app.routers import assignments, handoff, images, incidents, ingest, logs, stations
+from app.seed import seed_default_stations
 
 app = FastAPI(title="Drone-Based Emergency Coordination System")
 
@@ -31,6 +32,7 @@ app.include_router(handoff.router)
 @app.on_event("startup")
 async def on_startup():
     await ensure_indexes()
+    await seed_default_stations()
 
 
 @app.on_event("shutdown")
