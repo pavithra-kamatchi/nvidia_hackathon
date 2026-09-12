@@ -6,10 +6,11 @@ from app.schemas.incident import Incident
 
 
 class NotificationAgent:
-    """Agent 4. Turns a plan into dashboard-facing facts. Per project rule:
-    every incident is posted to the dashboard regardless of urgency; a
-    needs_human_verification incident stays gated at awaiting_approval until
-    a human reviews it (see routers/incidents.py `/review`)."""
+    """Agent 4. Posts a proposal to the dashboard without contacting anyone.
+
+    Every proposed allocation requires a human decision. External station and
+    911 actions are simulations handled by the explicit notification route.
+    """
 
     async def run(self, incident: Incident, assignment: Assignment) -> Incident:
         await monitoring_agent.log(
@@ -19,23 +20,17 @@ class NotificationAgent:
             payload={"assignment_id": assignment.assignment_id, "assigned_station_ids": assignment.assigned_station_ids},
         )
 
-        if assignment.escalate_to_911:
-            await monitoring_agent.log(
-                event_type="escalate_911",
-                summary=f"Incident {incident.incident_id} flagged high urgency — 911 escalation triggered.",
-                incident_id=incident.incident_id,
-                payload={"assignment_id": assignment.assignment_id},
-            )
-
-        if incident.status != IncidentStatus.awaiting_approval:
-            incident.status = IncidentStatus.notified
-            await incident_repo.replace(incident)
-            await monitoring_agent.log(
-                event_type="stations_notified",
-                summary=f"Station(s) {assignment.assigned_station_ids} notified for incident {incident.incident_id}.",
-                incident_id=incident.incident_id,
-                payload={"station_ids": assignment.assigned_station_ids},
-            )
+        incident.status = IncidentStatus.awaiting_approval
+        incident.needs_human_verification = True
+        await incident_repo.replace(incident)
+        await monitoring_agent.log(
+            event_type="allocation_awaiting_human_approval",
+            summary=f"Allocation {assignment.assignment_id} is awaiting human approval; no notification was sent.",
+            incident_id=incident.incident_id,
+            payload={"assignment_id": assignment.assignment_id},
+            actor_type="agent",
+            actor_id="administrative-agent",
+        )
 
         return incident
 

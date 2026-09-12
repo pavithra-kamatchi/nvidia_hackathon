@@ -1,10 +1,11 @@
 from datetime import datetime, timezone
 from typing import List, Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Header, HTTPException
 from pydantic import BaseModel
 
 from app.repositories.collections import station_repo
+from app.agents.monitoring import monitoring_agent
 from app.schemas.station import Station, StationCreate
 from app.utils.ids import generate_id
 
@@ -12,7 +13,7 @@ router = APIRouter(tags=["stations"])
 
 
 @router.post("/stations", response_model=Station)
-async def register_station(payload: StationCreate):
+async def register_station(payload: StationCreate, operator_id: str = Header(..., alias="X-Operator-ID")):
     now = datetime.now(timezone.utc)
     station = Station(
         **payload.model_dump(),
@@ -21,6 +22,13 @@ async def register_station(payload: StationCreate):
         current_deployments=[],
     )
     await station_repo.insert(station)
+    await monitoring_agent.log(
+        "station_registered",
+        f"Station {station.station_id} registered by operator {operator_id}.",
+        payload={"station_id": station.station_id},
+        actor_type="human",
+        actor_id=operator_id,
+    )
     return station
 
 
@@ -45,7 +53,11 @@ class StationUpdate(BaseModel):
 
 
 @router.patch("/stations/{station_id}", response_model=Station)
-async def update_station(station_id: str, payload: StationUpdate):
+async def update_station(
+    station_id: str,
+    payload: StationUpdate,
+    operator_id: str = Header(..., alias="X-Operator-ID"),
+):
     """Backs both the daily roster update and operational-status changes
     from the station UI — a plain state write Agent 3 picks up on its next
     trigger, no special path needed."""
@@ -54,8 +66,16 @@ async def update_station(station_id: str, payload: StationUpdate):
         raise HTTPException(status_code=404, detail="Station not found")
 
     updates = payload.model_dump(exclude_unset=True)
+    previous = {field: getattr(station, field) for field in updates}
     for field, value in updates.items():
         setattr(station, field, value)
 
     await station_repo.replace(station)
+    await monitoring_agent.log(
+        "station_updated",
+        f"Station {station_id} updated by operator {operator_id}.",
+        payload={"station_id": station_id, "previous": previous, "updates": updates},
+        actor_type="human",
+        actor_id=operator_id,
+    )
     return station
